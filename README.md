@@ -1,4 +1,6 @@
 # overwhelm
+![test](https://github.com/ExpediaGroup/overwhelm/workflows/test/badge.svg?branch=master)
+
 Overwhelm is an application that facilitate application deployment on Kubernetes.
 
 ## Development 
