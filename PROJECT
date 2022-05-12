@@ -16,13 +16,4 @@ resources:
   kind: Application
   path: github.com/ExpediaGroup/overwhelm/api/v1alpha1
   version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: expediagroup.com
-  group: core
-  kind: SourceReference
-  path: github.com/ExpediaGroup/overwhelm/api/v1alpha1
-  version: v1alpha1
 version: "3"

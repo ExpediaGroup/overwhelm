@@ -33,7 +33,6 @@ type Kustomize struct {
 	// JSON 6902 patches, defined as inline YAML objects.
 	// +optional
 	PatchesJSON6902 []kustomize.JSON6902Patch `json:"patchesJson6902,omitempty"`
-
 }
 
 // PostRenderer contains a Helm PostRenderer specification.
