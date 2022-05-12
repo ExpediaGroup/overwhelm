@@ -6,4 +6,23 @@ plugins:
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: overwhelm
 repo: github.com/ExpediaGroup/overwhelm
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: expediagroup.com
+  group: core
+  kind: Application
+  path: github.com/ExpediaGroup/overwhelm/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: expediagroup.com
+  group: core
+  kind: SourceReference
+  path: github.com/ExpediaGroup/overwhelm/api/v1alpha1
+  version: v1alpha1
 version: "3"

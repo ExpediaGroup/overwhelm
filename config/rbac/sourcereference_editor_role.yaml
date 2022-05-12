@@ -1,0 +1,24 @@
+# permissions for end users to edit sourcereferences.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sourcereference-editor-role
+rules:
+- apiGroups:
+  - core.expediagroup.com
+  resources:
+  - sourcereferences
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.expediagroup.com
+  resources:
+  - sourcereferences/status
+  verbs:
+  - get
