@@ -3,7 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/core.expediagroup.com_applications.yaml
-- bases/core.expediagroup.com_sourcereferences.yaml
+
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

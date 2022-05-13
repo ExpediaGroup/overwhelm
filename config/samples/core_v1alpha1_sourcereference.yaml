@@ -1,6 +1,0 @@
-apiVersion: core.expediagroup.com/v1alpha1
-kind: SourceReference
-metadata:
-  name: sourcereference-sample
-spec:
-  # TODO(user): Add fields here
