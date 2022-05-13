@@ -17,30 +17,6 @@ package v1alpha1
 // SourceReference is the reference of the source where the chart is available.
 // For e.g., the HelmRepository resource specifying where the helm chart is located
 
-type SourceReference struct {
-	// APIVersion of the source reference resource.
-	// +optional
-	APIVersion string `json:"apiVersion,omitempty"`
-
-	// Kind of the source reference resource.
-	// +kubebuilder:validation:Enum=HelmRepository;GitRepository;Bucket
-	// +required
-	Kind string `json:"kind,omitempty"`
-
-	// Name of the source reference resource.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	// +required
-	Name string `json:"name"`
-
-	// Namespace of the source reference resource.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:Optional
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
-}
-
 type PreRenderReference struct {
 	// Kind of the resource that holds the values in the data stanza that are to be rendered with, valid values are ('Secret', 'ConfigMap').
 	// +kubebuilder:validation:Enum=Secret;ConfigMap

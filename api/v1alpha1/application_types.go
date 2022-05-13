@@ -16,51 +16,11 @@ package v1alpha1
 
 import (
 	hcv2beta1 "github.com/fluxcd/helm-controller/api/v2beta1"
-	"github.com/fluxcd/pkg/apis/kustomize"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// Kustomize Helm PostRenderer specification.
-type Kustomize struct {
-	// Strategic merge patches, defined as inline YAML objects.
-	// +optional
-	PatchesStrategicMerge []apiextensionsv1.JSON `json:"patchesStrategicMerge,omitempty"`
-
-	// JSON 6902 patches, defined as inline YAML objects.
-	// +optional
-	PatchesJSON6902 []kustomize.JSON6902Patch `json:"patchesJson6902,omitempty"`
-}
-
-// PostRenderer contains a Helm PostRenderer specification.
-type PostRenderer struct {
-	// Kustomization to apply as PostRenderer.
-	// +optional
-	Kustomize *Kustomize `json:"kustomize,omitempty"`
-}
-
-type HelmChartSpec struct {
-	// Chart is the name or path of the Helm chart available at the location specified by SourceRef
-	// +required
-	Chart string `json:"chart"`
-
-	// Version is the semver expression version of the helm chart.
-	// +required
-	Version string `json:"version,omitempty"`
-
-	// SourceRef is the reference of the source where the chart is available. For e.g., the Helm Repository where the helm chart is located
-	// +required
-	SourceRef SourceReference `json:"sourceRef"`
-}
-
-type HelmChart struct {
-	// Spec holds the template for the HelmChart for this Application.
-	// +required
-	Spec HelmChartSpec `json:"spec"`
-}
 
 // ApplicationSpec defines the desired state of Application
 type ApplicationSpec struct {
@@ -69,7 +29,7 @@ type ApplicationSpec struct {
 
 	// Chart defines the Helm Chart that should be applied
 	// +required
-	Chart HelmChart `json:"chart,omitempty"`
+	Chart hcv2beta1.HelmChartTemplate `json:"chart,omitempty"`
 
 	// Interval at which to reconcile the application
 	// +required
@@ -117,7 +77,7 @@ type ApplicationSpec struct {
 
 	// PostRenderers hold customizations on the Kubernetes resources
 	// +optional
-	PostRenderers []PostRenderer `json:"postRenderers,omitempty"`
+	PostRenderers []hcv2beta1.PostRenderer `json:"postRenderers,omitempty"`
 
 	// TTL is a time to live string. The Application resource and all Helm chart applied resources
 	// will be deleted after this period.
