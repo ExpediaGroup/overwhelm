@@ -17,3 +17,16 @@ To create a new CRD with the corresponding Go files:
 ```console
 operator-sdk create api --group core --version v1alpha1 --kind Application --resource=true --controller=true --namespaced=true
 ```
+
+## Debugging
+Since this project is a Kubernetes operator triggered by resource creation, debugging can be done using a remote debugger.
+
+###Steps to achieve remote debugging:
+
+* Make sure you install kind
+* Create a kind cluster with the command in your terminal, `kind create cluster --name app-operator`
+* Use this cluster for all your debugging needs
+* To build and deploy your operator run, `make kind-debug`
+* In GoLand use remote debugger by selecting the GO Remote configuration. Within the configuration, host is "localhost" and port is "40000"
+* Now you can debug your code
+* Run `make undeploy` to remove your kubernetes resources once you are done

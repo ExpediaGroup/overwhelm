@@ -3,7 +3,10 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.0.1
+PROJECT := app-operator
+REGISTRY := kumo-docker-release-local.artylab.expedia.biz/library
+VERSION := $(shell git rev-parse HEAD|| echo "v0.0.1") #may need to change this to tags if we are using tags
+IMG = $(REGISTRY)/$(PROJECT):$(VERSION)
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -46,8 +49,7 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 	BUNDLE_GEN_FLAGS += --use-image-digests
 endif
 
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
@@ -116,9 +118,13 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-.PHONY: docker-build
-docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+.PHONY: docker-build-prod
+docker-build-prod: test ## Build docker image with the manager.
+	docker build -t ${IMG} --target prod .
+
+.PHONY: docker-build-debug
+docker-build-debug: test ## Build docker image with the manager.
+	docker build -t ${IMG} --target debug .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
@@ -231,3 +237,10 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+.PHONY: kind-load
+kind-load:
+	kind load docker-image $(IMG) --name $(PROJECT)
+
+.PHONY: kind-debug
+kind-debug: docker-build-debug kind-load deploy

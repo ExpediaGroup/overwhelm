@@ -1,0 +1,9 @@
+apiVersion: v1
+data:
+  environment: test
+kind: ConfigMap
+metadata:
+  name: egdata-properties
+  namespace: kube-public
+  labels:
+    "k8s.expediagroup.com/helm-values-source": "egdata"
