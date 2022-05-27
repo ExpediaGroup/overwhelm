@@ -15,7 +15,7 @@ package main
 
 import (
 	"flag"
-	"github.com/ExpediaGroup/overwhelm/pkg/data"
+	"github.com/ExpediaGroup/overwhelm/data/reference"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -78,7 +78,9 @@ func main() {
 		os.Exit(1)
 	}
 	setupLog.Info("Loading cluster data")
-	go data.LoadPreRenderData()
+
+	go reference.LoadPreRenderData()
+
 	if err = (&controllers.ApplicationReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

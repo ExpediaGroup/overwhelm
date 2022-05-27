@@ -1,4 +1,4 @@
-package data
+package reference
 
 import (
 	v1 "k8s.io/api/core/v1"
@@ -9,7 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var preRenderReference = make(map[string]map[string]string)
+var preRenderData = make(map[string]map[string]string)
 
 func LoadPreRenderData() {
 
@@ -22,18 +22,18 @@ func LoadPreRenderData() {
 	defer close(stop)
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(cm interface{}) {
-			preRenderReference[cm.(*v1.ConfigMap).Labels["k8s.expediagroup.com/helm-values-source"]] = cm.(*v1.ConfigMap).Data
+			preRenderData[cm.(*v1.ConfigMap).Labels["k8s.expediagroup.com/helm-values-source"]] = cm.(*v1.ConfigMap).Data
 		},
 		UpdateFunc: func(oldCM interface{}, cm interface{}) {
-			preRenderReference[cm.(*v1.ConfigMap).Labels["k8s.expediagroup.com/helm-values-source"]] = cm.(*v1.ConfigMap).Data
+			preRenderData[cm.(*v1.ConfigMap).Labels["k8s.expediagroup.com/helm-values-source"]] = cm.(*v1.ConfigMap).Data
 		},
 		DeleteFunc: func(cm interface{}) {
-			delete(preRenderReference, cm.(*v1.ConfigMap).Labels["k8s.expediagroup.com/helm-values-source"])
+			delete(preRenderData, cm.(*v1.ConfigMap).Labels["k8s.expediagroup.com/helm-values-source"])
 		},
 	})
 	informer.Run(stop)
 }
 
-func GetPreRenderReference() map[string]map[string]string {
-	return preRenderReference
+func GetPreRenderData() map[string]map[string]string {
+	return preRenderData
 }

@@ -445,48 +445,34 @@ spec:
                       type: object
                   type: object
                 type: array
-              preRenderFrom:
+              preRenderer:
                 description: PreRenderFrom holds references to resources containing
                   the values used for rendering the values.yaml file By default cluster-properties
                   and egdata-properties configmap values should be rendered. This
                   is for additional rendering.
-                items:
-                  properties:
-                    kind:
-                      description: Kind of the resource that holds the values in the
-                        data stanza that are to be rendered with, valid values are
-                        ('Secret', 'ConfigMap').
-                      enum:
-                      - Secret
-                      - ConfigMap
-                      type: string
-                    name:
-                      description: Name of the  resource that holds the values that
-                        are to be rendered with.
-                      maxLength: 253
-                      minLength: 1
-                      type: string
-                    namespace:
-                      description: Namespace where the resource resides
-                      maxLength: 63
-                      minLength: 1
-                      type: string
-                    optional:
-                      description: Optional marks this PreRenderReference as optional.
-                        When set, a not found error for any of the keys is ignored,
-                        but any error will still result in a reconciliation failure.
-                        Defaults to false
-                      type: boolean
-                    preRenderPrefix:
-                      description: Prefix of the value to be parsed or scanned for
-                        rendering. for e.g., to render {{ xyz.environment }}, the
-                        PreRenderPrefix will be "xyz".
-                      type: string
-                  required:
-                  - kind
-                  - name
-                  type: object
-                type: array
+                properties:
+                  closeDelimiter:
+                    description: Custom non white-spaced and non alpha-numeric close
+                      delimiter used for go templating action to pre-render. For e.g.,
+                      %>. Default is  }}
+                    maxLength: 2
+                    minLength: 2
+                    type: string
+                  enableHelmTemplating:
+                    description: Enable to not render actions within delimiter {{
+                      }} so that they can be rendered by Helm. Defaults to false.
+                      If both helm templating and pre-rendering are desired, then
+                      enable EnableHelmTemplating and specify non default open and
+                      close delimiters at LeftDelimiter and RightDelimiter respectively
+                    type: boolean
+                  openDelimiter:
+                    description: Custom non white-spaced and non alpha-numeric open
+                      delimiter used for go templating action to pre-render. For e.g.,
+                      <%. Default is {{
+                    maxLength: 2
+                    minLength: 2
+                    type: string
+                type: object
               rollback:
                 description: Rollback holds configurations to be applied when the
                   current revision of the application fails to run

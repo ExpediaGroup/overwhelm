@@ -17,33 +17,21 @@ package v1alpha1
 // SourceReference is the reference of the source where the chart is available.
 // For e.g., the HelmRepository resource specifying where the helm chart is located
 
-type PreRenderReference struct {
-	// Kind of the resource that holds the values in the data stanza that are to be rendered with, valid values are ('Secret', 'ConfigMap').
-	// +kubebuilder:validation:Enum=Secret;ConfigMap
-	// +required
-	Kind string `json:"kind"`
-
-	// Name of the  resource that holds the values that are to be rendered with.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	// +required
-	Name string `json:"name"`
-
-	// Namespace where the resource resides
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:Optional
+type PreRenderer struct {
+	// Custom non white-spaced and non alpha-numeric open delimiter used for go templating action to pre-render. For e.g., <%. Default is {{
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=2
 	// +optional
-	Namespace string `json:"namespace,omitempty"`
+	LeftDelimiter string `json:"openDelimiter,omitempty"`
 
-	// Prefix of the value to be parsed or scanned for rendering. for e.g., to render {{ xyz.environment }},
-	// the PreRenderPrefix will be "xyz".
-	// +required
-	PreRenderPrefix string `json:"preRenderPrefix,omitempty"`
-
-	// Optional marks this PreRenderReference as optional. When set, a not found error
-	// for any of the keys is ignored, but any error will still result in a reconciliation failure.
-	// Defaults to false
+	// Custom non white-spaced and non alpha-numeric close delimiter used for go templating action to pre-render. For e.g., %>. Default is  }}
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=2
 	// +optional
-	Optional bool `json:"optional,omitempty"`
+	RightDelimiter string `json:"closeDelimiter,omitempty"`
+
+	// Enable to not render actions within delimiter {{ }} so that they can be rendered by Helm. Defaults to false. If both helm templating
+	// and pre-rendering are desired, then enable EnableHelmTemplating and specify non default open and close delimiters at LeftDelimiter and RightDelimiter respectively
+	// +optional
+	EnableHelmTemplating bool `json:"enableHelmTemplating,omitempty"`
 }

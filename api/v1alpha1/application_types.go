@@ -73,7 +73,7 @@ type ApplicationSpec struct {
 	// PreRenderFrom holds references to resources containing the values used for rendering the values.yaml file
 	// By default cluster-properties and egdata-properties configmap values should be rendered. This is for additional rendering.
 	// +optional
-	PreRenderFrom []PreRenderReference `json:"preRenderFrom,omitempty"`
+	PreRenderer PreRenderer `json:"preRenderer,omitempty"`
 
 	// PostRenderers hold customizations on the Kubernetes resources
 	// +optional

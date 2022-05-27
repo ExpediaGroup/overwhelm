@@ -18,15 +18,16 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/ExpediaGroup/overwhelm/pkg/data"
+	"github.com/ExpediaGroup/overwhelm/data/reference"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"regexp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"text/template"
 
 	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
@@ -37,6 +38,11 @@ type ApplicationReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
+
+const (
+	FinalizerName = "overwhelm.expediagroup.com/finalizer"
+	ManagedBy     = "app.kubernetes.io/managed-by"
+)
 
 //+kubebuilder:rbac:groups=core.expediagroup.com,resources=applications,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.expediagroup.com,resources=applications/status,verbs=get;update;patch
@@ -53,16 +59,16 @@ type ApplicationReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := ctrllog.FromContext(ctx)
 	// name of our custom finalizer
-	myFinalizerName := "overwhelm.expediagroup.com/finalizer"
+
 	application := &corev1alpha1.Application{}
 	if err := r.Get(ctx, req.NamespacedName, application); err != nil {
-		log.Log.Error(err, "Error reading application object")
+		log.Error(err, "Error reading application object")
 	}
 	if application.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(application, myFinalizerName) {
-			controllerutil.AddFinalizer(application, myFinalizerName)
+		if !controllerutil.ContainsFinalizer(application, FinalizerName) {
+			controllerutil.AddFinalizer(application, FinalizerName)
 			if err := r.Update(ctx, application); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -71,11 +77,9 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 		}
 	} else {
-		if controllerutil.ContainsFinalizer(application, myFinalizerName) {
-			//if err := r.deleteAssociatedResources(application, ctx); err != nil {
-			//	return ctrl.Result{}, err
-			//}
-			controllerutil.RemoveFinalizer(application, myFinalizerName)
+		if controllerutil.ContainsFinalizer(application, FinalizerName) {
+			//Add any pre delete actions here.
+			controllerutil.RemoveFinalizer(application, FinalizerName)
 			if err := r.Update(ctx, application); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -89,21 +93,30 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1alpha1.Application{}).
+		Owns(&v1.ConfigMap{}).
 		Complete(r)
 }
 
 func (r *ApplicationReconciler) createOrUpdateConfigMap(application *corev1alpha1.Application, ctx context.Context) error {
-	values, _ := r.renderValues(application.Spec.Data)
+	logger := ctrllog.Log.WithName("application-configMap")
+	if err := r.renderValues(application); err != nil {
+		logger.Error(err, "error rendering values", "values", application.Spec.Data)
+		return err
+	}
 
 	cm := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        application.Name,
 			Namespace:   application.Namespace,
-			Labels:      make(map[string]string),
-			Annotations: make(map[string]string),
+			Labels:      application.Labels,
+			Annotations: application.Annotations,
 		},
-		Data: values,
+		Data: application.Spec.Data,
 	}
+	if cm.Labels == nil {
+		cm.Labels = make(map[string]string)
+	}
+	cm.Labels[ManagedBy] = "overwhelm"
 	if err := ctrl.SetControllerReference(application, cm, r.Scheme); err != nil {
 		return err
 	}
@@ -113,32 +126,57 @@ func (r *ApplicationReconciler) createOrUpdateConfigMap(application *corev1alpha
 		Name:      application.Name,
 	}, &currentCM); err != nil {
 		if err := r.Create(ctx, cm); err != nil {
-			log.Log.Error(errors.New("unable to update Configmap for Application"), "")
+			logger.Error(err, "error creating the configmap", "cm", cm)
 			return err
 		}
 	} else {
 		if err := r.Update(ctx, cm); err != nil {
-			log.Log.Error(errors.New("unable to create Configmap for Application"), "")
+			logger.Error(err, "error updating the configmap", "cm", cm)
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *ApplicationReconciler) renderValues(values map[string]string) (map[string]string, error) {
+func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Application) error {
+	values := application.Spec.Data
+	leftDelimiter := "{{"
+	rightDelimiter := "}}"
+	preRenderer := &application.Spec.PreRenderer
+	if preRenderer != nil {
+
+		// when no pre-rendering is desired. Only Helm Templating
+		if preRenderer.EnableHelmTemplating && preRenderer.LeftDelimiter == "" && preRenderer.RightDelimiter == "" {
+			return nil
+		}
+
+		// when delimiters are specified but only partially
+		if preRenderer.LeftDelimiter == "" || preRenderer.RightDelimiter == "" {
+			if preRenderer.LeftDelimiter != "" || preRenderer.RightDelimiter != "" {
+				return errors.New("application preRenderer has partial delimiter information")
+			}
+		}
+		if preRenderer.LeftDelimiter != "" && preRenderer.RightDelimiter != "" {
+			leftDelimiter = preRenderer.LeftDelimiter
+			rightDelimiter = preRenderer.RightDelimiter
+			if !isDelimValid(leftDelimiter) || !isDelimValid(rightDelimiter) {
+				return errors.New("application preRenderer has invalid delimiters. Make sure it has two characters, is non alpha numeric and with no spaces")
+			}
+		}
+	}
 
 	for key, value := range values {
 		buf := new(bytes.Buffer)
-		tmpl, _ := template.New("test").Parse(value)
-		_ = tmpl.Execute(buf, data.GetPreRenderReference())
+		tmpl, _ := template.New("properties").Option("missingkey=error").Delims(leftDelimiter, rightDelimiter).Parse(value)
+		_ = tmpl.Execute(buf, reference.GetPreRenderData())
 		values[key] = buf.String()
 	}
-	return values, nil
+	return nil
 }
-
-//func (r *ApplicationReconciler) deleteAssociatedResources(application *corev1alpha1.Application, ctx context.Context) error {
-//
-//}
+func isDelimValid(delim string) bool {
+	r := regexp.MustCompile(`^.*([a-zA-Z0-9 ])+.*$`)
+	return len(delim) == 2 && !r.MatchString(delim)
+}
 
 func (r *ApplicationReconciler) CreateOrUpdateResources(application *corev1alpha1.Application, ctx context.Context) error {
 	return r.createOrUpdateConfigMap(application, ctx)
