@@ -37,5 +37,6 @@ FROM debian:buster as debug
 WORKDIR /
 COPY --from=delve /go/bin/dlv .
 COPY --from=builder /workspace/manager .
-EXPOSE 8443 40000
+USER 65532:65532
+EXPOSE 40000
 ENTRYPOINT ["/dlv", "--listen=:40000", "--headless=true", "--api-version=2", "--accept-multiclient", "exec", "./manager"]

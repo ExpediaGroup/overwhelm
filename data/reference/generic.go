@@ -37,3 +37,15 @@ func LoadPreRenderData() {
 func GetPreRenderData() map[string]map[string]string {
 	return preRenderData
 }
+
+func LoadTestPrerenderData() {
+	preRenderData["cluster"] = map[string]string{
+		"cluster": "rcp-xyz",
+		"region":  "us-west-2",
+		"account": "1234",
+		"segment": "oos",
+	}
+	preRenderData["egdata"] = map[string]string{
+		"environment": "test",
+	}
+}

@@ -17,6 +17,7 @@ package controllers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/ExpediaGroup/overwhelm/data/reference"
 	v1 "k8s.io/api/core/v1"
@@ -33,7 +34,7 @@ import (
 	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
 )
 
-// ApplicationReconciler reconciles a Application object
+// ApplicationReconciler reconciles an Application object
 type ApplicationReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -99,6 +100,12 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *ApplicationReconciler) createOrUpdateConfigMap(application *corev1alpha1.Application, ctx context.Context) error {
 	logger := ctrllog.Log.WithName("application-configMap")
+	b, err := json.Marshal(reference.GetPreRenderData())
+	if err != nil {
+		logger.Error(err, "err marshalling")
+	}
+	logger.Info("PrerenderData" + string(b))
+
 	if err := r.renderValues(application); err != nil {
 		logger.Error(err, "error rendering values", "values", application.Spec.Data)
 		return err
@@ -168,7 +175,9 @@ func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Applicati
 	for key, value := range values {
 		buf := new(bytes.Buffer)
 		tmpl, _ := template.New("properties").Option("missingkey=error").Delims(leftDelimiter, rightDelimiter).Parse(value)
-		_ = tmpl.Execute(buf, reference.GetPreRenderData())
+		if err := tmpl.Execute(buf, reference.GetPreRenderData()); err != nil {
+			return err
+		}
 		values[key] = buf.String()
 	}
 	return nil

@@ -118,8 +118,8 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-.PHONY: docker-build-prod
-docker-build-prod: test ## Build docker image with the manager.
+.PHONY: docker-build
+docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} --target prod .
 
 .PHONY: docker-build-debug
@@ -143,6 +143,11 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: deploy-debug
+deploy-debug: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	cd config/debug/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/debug/default | kubectl apply -f -
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
@@ -239,8 +244,15 @@ catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
 .PHONY: kind-load
-kind-load:
+kind-load: # Load the docker image into a kind cluster
 	kind load docker-image $(IMG) --name $(PROJECT)
 
-.PHONY: kind-debug
-kind-debug: docker-build-debug kind-load deploy
+.PHONY: kind-debug # Build the image, load it in a Kind cluster and deploy all the necessary resources
+kind-debug: docker-build-debug kind-load deploy-debug
+
+.PHONY: kind
+kind: docker-build kind-load deploy
+
+.PHONY: delve-port-forward # Port forward the delve port for remote debugging
+delve-port-forward: $(shell kubectl port-forward deployment/overwhelm-controller-manager 40000:40000)
+
