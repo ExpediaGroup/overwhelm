@@ -253,6 +253,12 @@ kind-debug: docker-build-debug kind-load deploy-debug
 .PHONY: kind
 kind: docker-build kind-load deploy
 
+.PHONY: kind-clean-create
+kind-clean-create: undeploy
+	kind delete cluster --name  app-operator
+	kind create cluster --name app-operator
+
 .PHONY: delve-port-forward # Port forward the delve port for remote debugging
-delve-port-forward: $(shell kubectl port-forward deployment/overwhelm-controller-manager 40000:40000)
+delve-port-forward:
+	kubectl port-forward deployment/overwhelm-controller-manager -n overwhelm-system 40000:40000
 

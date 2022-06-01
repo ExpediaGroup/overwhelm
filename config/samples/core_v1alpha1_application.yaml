@@ -18,5 +18,7 @@ spec:
       account : {{ .cluster.account }}
       region : {{ .cluster.region }}
       environment : {{ .egdata.environment }}
+status:
+
 
 

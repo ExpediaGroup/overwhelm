@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: kumo-docker-release-local.artylab.expedia.biz/library/app-operator
-  newTag: 3b31c34fc1a3194704cc6b625f276208e0b415cf
+  newTag: 094d08b3459add91a882e9c474f408e2a340083e

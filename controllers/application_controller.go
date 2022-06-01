@@ -17,9 +17,9 @@ package controllers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"github.com/ExpediaGroup/overwhelm/data/reference"
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -45,6 +45,8 @@ const (
 	ManagedBy     = "app.kubernetes.io/managed-by"
 )
 
+var log logr.Logger
+
 //+kubebuilder:rbac:groups=core.expediagroup.com,resources=applications,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.expediagroup.com,resources=applications/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.expediagroup.com,resources=applications/finalizers,verbs=update
@@ -60,9 +62,9 @@ const (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := ctrllog.FromContext(ctx)
+	log = ctrllog.FromContext(ctx)
 	// name of our custom finalizer
-
+	log.Info("Starting to read Application")
 	application := &corev1alpha1.Application{}
 	if err := r.Get(ctx, req.NamespacedName, application); err != nil {
 		log.Error(err, "Error reading application object")
@@ -99,15 +101,9 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *ApplicationReconciler) createOrUpdateConfigMap(application *corev1alpha1.Application, ctx context.Context) error {
-	logger := ctrllog.Log.WithName("application-configMap")
-	b, err := json.Marshal(reference.GetPreRenderData())
-	if err != nil {
-		logger.Error(err, "err marshalling")
-	}
-	logger.Info("PrerenderData" + string(b))
 
 	if err := r.renderValues(application); err != nil {
-		logger.Error(err, "error rendering values", "values", application.Spec.Data)
+		log.Error(err, "error rendering values", "values", application.Spec.Data)
 		return err
 	}
 
@@ -133,12 +129,13 @@ func (r *ApplicationReconciler) createOrUpdateConfigMap(application *corev1alpha
 		Name:      application.Name,
 	}, &currentCM); err != nil {
 		if err := r.Create(ctx, cm); err != nil {
-			logger.Error(err, "error creating the configmap", "cm", cm)
+			log.Error(err, "error creating the configmap", "cm", cm)
 			return err
 		}
 	} else {
+		log.Info("updating configmap")
 		if err := r.Update(ctx, cm); err != nil {
-			logger.Error(err, "error updating the configmap", "cm", cm)
+			log.Error(err, "error updating the configmap", "cm", cm)
 			return err
 		}
 	}
@@ -174,8 +171,11 @@ func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Applicati
 
 	for key, value := range values {
 		buf := new(bytes.Buffer)
-		tmpl, _ := template.New("properties").Option("missingkey=error").Delims(leftDelimiter, rightDelimiter).Parse(value)
-		if err := tmpl.Execute(buf, reference.GetPreRenderData()); err != nil {
+		tmpl, err := template.New("properties").Option("missingkey=error").Delims(leftDelimiter, rightDelimiter).Parse(value)
+		if err != nil {
+			return err
+		}
+		if err = tmpl.Execute(buf, reference.GetPreRenderData()); err != nil {
 			return err
 		}
 		values[key] = buf.String()
