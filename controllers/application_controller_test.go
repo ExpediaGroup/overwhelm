@@ -3,15 +3,17 @@ package controllers
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha1"
 	"github.com/ExpediaGroup/overwhelm/data/reference"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
+	//helmControllerV1 "github.com/fluxcd/helm-controller/api/v2beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 var ctx context.Context
@@ -143,3 +145,19 @@ var _ = Describe("Application controller", func() {
 		})
 	})
 })
+
+//var _ = Describe("Application controller", func() {
+//	ctx := context.Background()
+//
+//	Context("When creating an Application resource", func() {
+//		It("Should Deploy Successfully", func() {
+//			By("By creating a new HelmRelease")
+//			reference.LoadTestPrerenderData()
+//			Expect(k8sClient.Create(ctx, application)).Should(Succeed())
+//			hr := &helmControllerV1.HelmRelease{}
+//			Eventually(
+//				getResourceFunc(ctx, client.ObjectKey{Name: application.Name, Namespace: application.Namespace}, hr),
+//				time.Second*5, time.Millisecond*500).Should(BeNil())
+//		})
+//	})
+//})
