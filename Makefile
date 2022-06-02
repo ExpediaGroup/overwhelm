@@ -3,7 +3,10 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.0.1
+PROJECT := app-operator
+REGISTRY := kumo-docker-release-local.artylab.expedia.biz/library
+VERSION := $(shell git rev-parse HEAD|| echo "v0.0.1") #may need to change this to tags if we are using tags
+IMG = $(REGISTRY)/$(PROJECT):$(VERSION)
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -46,8 +49,7 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 	BUNDLE_GEN_FLAGS += --use-image-digests
 endif
 
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
@@ -118,7 +120,11 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build -t ${IMG} --target prod .
+
+.PHONY: docker-build-debug
+docker-build-debug: test ## Build docker image with the manager.
+	docker build -t ${IMG} --target debug .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
@@ -137,6 +143,11 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: deploy-debug
+deploy-debug: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	cd config/debug/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/debug/default | kubectl apply -f -
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
@@ -231,3 +242,23 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+.PHONY: kind-load
+kind-load: # Load the docker image into a kind cluster
+	kind load docker-image $(IMG) --name $(PROJECT)
+
+.PHONY: kind-debug # Build the image, load it in a Kind cluster and deploy all the necessary resources
+kind-debug: docker-build-debug kind-load deploy-debug
+
+.PHONY: kind
+kind: docker-build kind-load deploy
+
+.PHONY: kind-clean-create
+kind-clean-create: undeploy
+	kind delete cluster --name  app-operator
+	kind create cluster --name app-operator
+
+.PHONY: delve-port-forward # Port forward the delve port for remote debugging
+delve-port-forward:
+	kubectl port-forward deployment/overwhelm-controller-manager -n overwhelm-system 40000:40000
+
