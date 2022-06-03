@@ -70,8 +70,8 @@ type ApplicationSpec struct {
 	// +optional
 	Data map[string]string `json:"data,omitempty"`
 
-	// PreRenderFrom holds references to resources containing the values used for rendering the values.yaml file
-	// By default cluster-properties and egdata-properties configmap values should be rendered. This is for additional rendering.
+	// PreRenderer holds custom templating delimiters and a flag to indicate whether standard delimiters should skip rendering and instead apply helm templating or not
+	// By default standard delimiters {{ and }} will be used to render values within. If specified then the custom delimiters will be used.
 	// +optional
 	PreRenderer PreRenderer `json:"preRenderer,omitempty"`
 

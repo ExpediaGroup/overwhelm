@@ -18,21 +18,18 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"regexp"
-	"text/template"
-	"time"
-
 	"github.com/ExpediaGroup/overwhelm/data/reference"
-	helmControllerV1 "github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"regexp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"text/template"
 
 	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
 )
@@ -145,91 +142,6 @@ func (r *ApplicationReconciler) createOrUpdateConfigMap(application *corev1alpha
 	return nil
 }
 
-func (r *ApplicationReconciler) createOrUpdateHelmRelease(application *corev1alpha1.Application, ctx context.Context) error {
-	configMapName := application.Name
-	//additionalValues := map[string]string{"releaseId": release.ReleaseId}
-	//Adding release Id (as a random ID) to the values field in the template below as a trigger to restart the
-	//helm release every time theres an update even if there are no other changes in the HR template.
-	//Doing this will immediately trigger Helm Controller into action, rather than waiting for the normal reconciliation interval.
-	//And the reason we are doing that is to improve the user experience (not force them to wait for up to 10 minutes or even 3 minutes to get an updated status).
-	//values, _ := json.Marshal(&additionalValues)
-	//rawValues := v1.JSON{Raw: values}
-
-	helmChartTemplate := &helmControllerV1.HelmChartTemplate{
-		Spec: helmControllerV1.HelmChartTemplateSpec{
-			Chart:   application.Name,
-			Version: application.APIVersion,
-			SourceRef: helmControllerV1.CrossNamespaceObjectReference{
-				Kind:      "HelmRepository",
-				Name:      "public-helm-virtual",
-				Namespace: "runtime",
-			},
-		},
-	}
-
-	hr := &helmControllerV1.HelmRelease{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        application.Name,
-			Namespace:   application.Namespace,
-			Labels:      make(map[string]string),
-			Annotations: make(map[string]string),
-		},
-		Spec: helmControllerV1.HelmReleaseSpec{
-			Interval: metav1.Duration{
-				Duration: 10 * time.Minute,
-			},
-			Chart:           *helmChartTemplate,
-			ReleaseName:     application.Name,
-			TargetNamespace: application.Namespace,
-			ValuesFrom: []helmControllerV1.ValuesReference{
-				{
-					Kind:      "ConfigMap",
-					Name:      configMapName,
-					ValuesKey: "values.yaml",
-					Optional:  false,
-				},
-				{
-					Kind:      "ConfigMap",
-					Name:      configMapName,
-					ValuesKey: "global.yaml",
-					Optional:  false,
-				},
-				{
-					Kind:      "ConfigMap",
-					Name:      configMapName,
-					ValuesKey: "immutable.yaml",
-					Optional:  false,
-				},
-			},
-			//Values: &rawValues,
-			Upgrade: &helmControllerV1.Upgrade{
-				Remediation: &helmControllerV1.UpgradeRemediation{
-					Retries: 3,
-				},
-			},
-		},
-	}
-	if err := ctrl.SetControllerReference(application, hr, r.Scheme); err != nil {
-		return err
-	}
-	currentHR := v1.ConfigMap{}
-	if err := r.Get(ctx, types.NamespacedName{
-		Namespace: application.Namespace,
-		Name:      application.Name,
-	}, &currentHR); err != nil {
-		if err := r.Create(ctx, hr); err != nil {
-			log.Error(errors.New("unable to update HelmRelease for Application"), "")
-			return err
-		}
-	} else {
-		if err := r.Update(ctx, hr); err != nil {
-			log.Error(errors.New("unable to create HelmRelease for Application"), "")
-			return err
-		}
-	}
-	return nil
-}
-
 func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Application) error {
 	values := application.Spec.Data
 	leftDelimiter := "{{"
@@ -276,7 +188,8 @@ func isDelimValid(delim string) bool {
 }
 
 func (r *ApplicationReconciler) CreateOrUpdateResources(application *corev1alpha1.Application, ctx context.Context) error {
-	r.createOrUpdateConfigMap(application, ctx)
-	r.createOrUpdateHelmRelease(application, ctx)
+	if err := r.createOrUpdateConfigMap(application, ctx); err != nil {
+		return err
+	}
 	return nil
 }
