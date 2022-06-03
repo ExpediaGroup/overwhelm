@@ -1,0 +1,24 @@
+apiVersion: core.expediagroup.com/v1alpha1
+kind: Application
+metadata:
+  name: application-sample
+  namespace: app-namespace
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: paved-road-service
+      version: '4.0.x'
+      sourceRef:
+        name: public-helm-virtual
+        kind: HelmRepository
+  data:
+    values.yaml: |-
+      deployment : hello-world
+      account : {{ .cluster.account }}
+      region : {{ .cluster.region }}
+      environment : {{ .egdata.environment }}
+status:
+
+
+

@@ -1,0 +1,12 @@
+apiVersion: v1
+data:
+  cluster: rcp-xyz
+  region: us-west-2
+  account: "1234"
+  segment: oos
+kind: ConfigMap
+metadata:
+  name: cluster-properties
+  namespace: kube-public
+  labels:
+    "k8s.expediagroup.com/helm-values-source": "cluster"
