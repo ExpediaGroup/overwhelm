@@ -9,4 +9,4 @@ metadata:
   name: cluster-properties
   namespace: kube-public
   labels:
-    "k8s.expediagroup.com/helm-values-source": "cluster"
+    "k8s.overwhelm.com/render-values-source": "cluster"

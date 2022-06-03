@@ -6,4 +6,4 @@ metadata:
   name: egdata-properties
   namespace: kube-public
   labels:
-    "k8s.expediagroup.com/helm-values-source": "egdata"
+    "k8s.overwhelm.com/render-values-source": "egdata"
