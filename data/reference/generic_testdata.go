@@ -2,10 +2,10 @@ package reference
 
 func LoadTestPrerenderData() {
 	preRenderData["cluster"] = map[string]string{
-		"cluster": "rcp-xyz",
+		"cluster": "some-cluster",
 		"region":  "us-west-2",
 		"account": "1234",
-		"segment": "oos",
+		"segment": "some-segment",
 	}
 	preRenderData["egdata"] = map[string]string{
 		"environment": "test",

@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PROJECT := app-operator
-REGISTRY := kumo-docker-release-local.artylab.expedia.biz/library
+PROJECT := overwhelm
+REGISTRY := expediagroup.com
 VERSION := $(shell git rev-parse HEAD|| echo "v0.0.1") #may need to change this to tags if we are using tags
 IMG = $(REGISTRY)/$(PROJECT):$(VERSION)
 
@@ -255,8 +255,8 @@ kind: docker-build kind-load deploy
 
 .PHONY: kind-clean-create
 kind-clean-create: undeploy
-	kind delete cluster --name  app-operator
-	kind create cluster --name app-operator
+	kind delete cluster --name  overwhelm
+	kind create cluster --name overwhelm
 
 .PHONY: delve-port-forward # Port forward the delve port for remote debugging
 delve-port-forward:

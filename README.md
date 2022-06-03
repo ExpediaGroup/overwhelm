@@ -24,10 +24,16 @@ Since this project is a Kubernetes operator triggered by resource creation, debu
 ### Steps to achieve remote debugging:
 
 * Make sure you install `kind`
-* Create a kind cluster with the command in your terminal, `kind create cluster --name app-operator`
+* Create a kind cluster with the command in your terminal, `kind create cluster --name overwhelm`
 * Use this cluster for all your debugging needs
 * To build and deploy your operator run, `make kind-debug`
 * Once the operator resources are deployed and running successfully in the cluster, run the `make delve-port-forward` command
 * In GoLand use remote debugger by selecting the `GO Remote` configuration. Within the configuration, host is `localhost` and port is `40000`
 * Now you can debug your code. To test the operator logic, deploy whatever resources you need from the config/samples folder.
 * Run `make undeploy` to remove your kubernetes resources once you are done
+
+## Testing
+
+* Kubebuilder uses @Ginkgo and @Gomega test suites which are configured in controllers/suite_test.go
+* Run `make test` to test your changes. 
+* Reference materials: [Gomega](https://onsi.github.io/gomega/) and [Ginkgo](https://onsi.github.io/ginkgo/)

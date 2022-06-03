@@ -7,8 +7,8 @@ spec:
   interval: 10m
   chart:
     spec:
-      chart: paved-road-service
-      version: '4.0.x'
+      chart: some-chart-name
+      version: '0.0.1'
       sourceRef:
         name: public-helm-virtual
         kind: HelmRepository

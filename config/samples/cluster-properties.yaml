@@ -1,9 +1,9 @@
 apiVersion: v1
 data:
-  cluster: rcp-xyz
+  cluster: some-cluster
   region: us-west-2
   account: "1234"
-  segment: oos
+  segment: some-segment
 kind: ConfigMap
 metadata:
   name: cluster-properties
