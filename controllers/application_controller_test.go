@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha1"
-	"github.com/ExpediaGroup/overwhelm/data/reference"
+	"github.com/ExpediaGroup/overwhelm/pkg/data"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -62,7 +62,7 @@ func cmEquals(key client.ObjectKey, expectedCM *v1.ConfigMap) func() error {
 
 var _ = Describe("Application controller", func() {
 	ctx = context.Background()
-	reference.LoadTestPrerenderData()
+	data.LoadTestPrerenderData()
 
 	Context("When creating an Application resource", func() {
 		It("Should Deploy Successfully", func() {

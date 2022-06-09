@@ -1,4 +1,4 @@
-package reference
+package data
 
 func LoadTestPrerenderData() {
 	preRenderData["cluster"] = map[string]string{

@@ -70,8 +70,7 @@ type ApplicationSpec struct {
 	// +optional
 	Data map[string]string `json:"data,omitempty"`
 
-	// PreRenderer holds custom templating delimiters and a flag to indicate whether standard delimiters should skip rendering and instead apply helm templating or not
-	// By default standard delimiters {{ and }} will be used to render values within. If specified then the custom delimiters will be used.
+	// PreRenderer holds custom templating delimiters and a flag to enable helm templating. If helm templating is enabled, custom delimiters must be specified.
 	// +optional
 	PreRenderer PreRenderer `json:"preRenderer,omitempty"`
 

@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/ExpediaGroup/overwhelm/data/reference"
+	"github.com/ExpediaGroup/overwhelm/pkg/data"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,7 +64,6 @@ var log logr.Logger
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log = ctrllog.FromContext(ctx)
 	// name of our custom finalizer
-	log.Info("Starting to read Application")
 	application := &corev1alpha1.Application{}
 	if err := r.Get(ctx, req.NamespacedName, application); err != nil {
 		log.Error(err, "Error reading application object")
@@ -175,7 +174,7 @@ func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Applicati
 		if err != nil {
 			return err
 		}
-		if err = tmpl.Execute(buf, reference.GetPreRenderData()); err != nil {
+		if err = tmpl.Execute(buf, data.GetPreRenderData()); err != nil {
 			return err
 		}
 		values[key] = buf.String()

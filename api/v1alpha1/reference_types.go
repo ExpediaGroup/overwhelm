@@ -30,8 +30,9 @@ type PreRenderer struct {
 	// +optional
 	RightDelimiter string `json:"closeDelimiter,omitempty"`
 
-	// Enable to not render actions within delimiters {{ }} so that they can be rendered by Helm. Defaults to false. If both helm templating
-	// and pre-rendering are desired, then enable EnableHelmTemplating and specify non default open and close delimiters at LeftDelimiter and RightDelimiter respectively
+	// Enable to allow Helm Templating to interpolate values within the default delimiters {{ }}.
+	// Defaults to false allowing the pre-renderer to do interpolation within the default delimiters. If both helm templating
+	// and pre-rendering are desired, then enable EnableHelmTemplating and specify custom delimiters as LeftDelimiter and RightDelimiter
 	// +optional
 	EnableHelmTemplating bool `json:"enableHelmTemplating,omitempty"`
 }
