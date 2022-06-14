@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha1"
-	"github.com/ExpediaGroup/overwhelm/pkg/data"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,19 +28,34 @@ var application = &v1alpha1.Application{
 		},
 	},
 	Spec: v1alpha1.ApplicationSpec{
-		Chart: v2beta1.HelmChartTemplate{Spec: v2beta1.HelmChartTemplateSpec{
-			Chart:   "good-chart",
-			Version: "0.0.1",
-			SourceRef: v2beta1.CrossNamespaceObjectReference{
-				Kind: "HelmRepository",
-				Name: "public-helm-virtual",
-			},
-		}},
-		Interval:        metav1.Duration{Duration: time.Millisecond * 250},
-		HelmReleaseName: "hr-test",
-		Timeout:         &metav1.Duration{Duration: time.Millisecond * 10},
-		Data:            map[string]string{"values.yaml": "deployment : hello-world \naccount : {{ .cluster.account }}\nregion : {{ .cluster.region }}\nenvironment : {{ .egdata.environment }}"},
+		Spec: v2beta1.HelmReleaseSpec{
+			Chart: v2beta1.HelmChartTemplate{
+				Spec: v2beta1.HelmChartTemplateSpec{
+					Chart:   "good-chart",
+					Version: "0.0.1",
+					SourceRef: v2beta1.CrossNamespaceObjectReference{
+						Kind: "HelmRepository",
+						Name: "public-helm-virtual",
+					},
+				}},
+			Interval:    metav1.Duration{Duration: time.Millisecond * 250},
+			ReleaseName: "hr-test",
+			Timeout:     &metav1.Duration{Duration: time.Millisecond * 10},
+		},
+		Data: map[string]string{"values.yaml": "deployment : hello-world \naccount : {{ .cluster.account }}\nregion : {{ .cluster.region }}\nenvironment : {{ .egdata.environment }}"},
 	},
+}
+
+func LoadTestPrerenderData() {
+	preRenderData["cluster"] = map[string]string{
+		"cluster": "some-cluster",
+		"region":  "us-west-2",
+		"account": "1234",
+		"segment": "some-segment",
+	}
+	preRenderData["egdata"] = map[string]string{
+		"environment": "test",
+	}
 }
 
 func cmEquals(key client.ObjectKey, expectedCM *v1.ConfigMap) func() error {
@@ -62,7 +76,7 @@ func cmEquals(key client.ObjectKey, expectedCM *v1.ConfigMap) func() error {
 
 var _ = Describe("Application controller", func() {
 	ctx = context.Background()
-	data.LoadTestPrerenderData()
+	LoadTestPrerenderData()
 
 	Context("When creating an Application resource", func() {
 		It("Should Deploy Successfully", func() {

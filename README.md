@@ -26,9 +26,9 @@ Since this project is a Kubernetes operator triggered by resource creation, debu
 * Make sure you install `kind`
 * Create a kind cluster with the command in your terminal, `kind create cluster --name overwhelm`
 * Use this cluster for all your debugging needs
-* To build and deploy your operator run, `make kind-debug`
-* Once the operator resources are deployed and running successfully in the cluster, run the `make delve-port-forward` command
-* In GoLand use remote debugger by selecting the `GO Remote` configuration. Within the configuration, host is `localhost` and port is `40000`
+* To build and deploy your operator run, `make deploy`
+* Once the operator resources are deployed and running successfully in the cluster, run the `make run-delve` command
+* In GoLand use remote debugger by selecting the `GO Remote` configuration. Within the configuration, host is `localhost` and port is `2345`
 * Now you can debug your code. To test the operator logic, deploy whatever resources you need from the config/samples folder.
 * Run `make undeploy` to remove your kubernetes resources once you are done
 

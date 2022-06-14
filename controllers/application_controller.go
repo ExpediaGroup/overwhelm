@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/ExpediaGroup/overwhelm/pkg/data"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -174,7 +173,7 @@ func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Applicati
 		if err != nil {
 			return err
 		}
-		if err = tmpl.Execute(buf, data.GetPreRenderData()); err != nil {
+		if err = tmpl.Execute(buf, GetPreRenderData()); err != nil {
 			return err
 		}
 		values[key] = buf.String()

@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: expediagroup.com/overwhelm
-  newTag: 96954aabf1092eb6639d11e09dddd2bb347e9209
+  newTag: 0e2a8a0f0f0e44722918ca1214eebddfad627fbe

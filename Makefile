@@ -144,10 +144,6 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
-.PHONY: deploy-debug
-deploy-debug: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/debug/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/debug/default | kubectl apply -f -
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
@@ -243,22 +239,8 @@ catalog-build: opm ## Build a catalog image.
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
-.PHONY: kind-load
-kind-load: # Load the docker image into a kind cluster
-	kind load docker-image $(IMG) --name $(PROJECT)
-
-.PHONY: kind-debug # Build the image, load it in a Kind cluster and deploy all the necessary resources
-kind-debug: docker-build-debug kind-load deploy-debug
-
-.PHONY: kind
-kind: docker-build kind-load deploy
-
-.PHONY: kind-clean-create
-kind-clean-create: undeploy
-	kind delete cluster --name  overwhelm
-	kind create cluster --name overwhelm
-
-.PHONY: delve-port-forward # Port forward the delve port for remote debugging
-delve-port-forward:
-	kubectl port-forward deployment/overwhelm-controller-manager -n overwhelm-system 40000:40000
+.PHONY: run-delve
+run-delve: generate fmt vet manifests
+	go build -gcflags "all=-trimpath=$(shell go env GOPATH)" -o bin/manager main.go
+	dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./bin/manager
 

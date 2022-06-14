@@ -15,7 +15,7 @@
 package v1alpha1
 
 import (
-	hcv2beta1 "github.com/fluxcd/helm-controller/api/v2beta1"
+	"github.com/fluxcd/helm-controller/api/v2beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,64 +27,18 @@ type ApplicationSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Chart defines the Helm Chart that should be applied
-	// +required
-	Chart hcv2beta1.HelmChartTemplate `json:"chart,omitempty"`
-
-	// Interval at which to reconcile the application
-	// +required
-	Interval metav1.Duration `json:"interval"`
-
-	// HelmReleaseName is the name of the Helm Manifest, also referenced as Release.Name in the Helm Chart.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=53
-	// +required
-	HelmReleaseName string `json:"helmReleaseName,omitempty"`
-
-	// Timeout is the time required to wait for the individual Kubernetes resources to be running, including passing health checks
-	// Defaults to '5m0s'.
-	// +optional
-	Timeout *metav1.Duration `json:"timeout,omitempty"`
-
-	// Install holds configurations to be applied when the application is created
-	// +optional
-	Install *hcv2beta1.Install `json:"create,omitempty"`
-
-	// Upgrade holds configurations to be applied when the application is updated
-	// +optional
-	Upgrade *hcv2beta1.Upgrade `json:"update,omitempty"`
-
-	// Uninstall holds configurations to be applied when the application is uninstalled
-	// +optional
-	Uninstall *hcv2beta1.Uninstall `json:"delete,omitempty"`
-
-	// Rollback holds configurations to be applied when the current revision of the application fails to run
-	// +optional
-	Rollback *hcv2beta1.Rollback `json:"rollback,omitempty"`
-
-	// Test holds configurations to be applied for the Helm Tests
-	// +optional
-	Test *hcv2beta1.Test `json:"test,omitempty"`
-
 	// Data to be consolidated for the Helm Chart's values.yaml file
 	// +optional
 	Data map[string]string `json:"data,omitempty"`
 
-	// PreRenderer holds custom templating delimiters and a flag to enable helm templating. If helm templating is enabled, custom delimiters must be specified.
+	// PreRenderer holds custom templating delimiters and a flag to
+	// By default standard delimiters {{ and }} will be used to render values within. If specified then the custom delimiters will be used.
 	// +optional
 	PreRenderer PreRenderer `json:"preRenderer,omitempty"`
 
-	// PostRenderers hold customizations on the Kubernetes resources
-	// +optional
-	PostRenderers []hcv2beta1.PostRenderer `json:"postRenderers,omitempty"`
-
-	// TTL is a time to live string. The Application resource and all Helm chart applied resources
-	// will be deleted after this period.
-	// The TTL string is a positive decimal number with a unit suffix,
-	// such as "300m" or "1.5h" or "2h45m" or "2d4h45m" or "2d1.5h45m".
-	// Valid time units are "m", "h", "d" for mins, hours or days respectively.
-	// +kubebuilder:validation:Pattern=`(^(([1-9]|([0-9]*(.[0-9]+)))(m|h|d){1})+$)`
-	TTL string `json:"ttl,omitempty"`
+	// Helm Release spec
+	// +required
+	Spec v2beta1.HelmReleaseSpec `json:"spec,omitempty"`
 }
 
 // ApplicationStatus defines the observed state of Application
