@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,6 +64,7 @@ var log logr.Logger
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log = ctrllog.FromContext(ctx)
 	// name of our custom finalizer
+
 	application := &corev1alpha1.Application{}
 	if err := r.Get(ctx, req.NamespacedName, application); err != nil {
 		log.Error(err, "Error reading application object")
