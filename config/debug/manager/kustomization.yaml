@@ -12,5 +12,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: expediagroup.com/overwhelm
-  newTag: 0e2a8a0f0f0e44722918ca1214eebddfad627fbe
+  newName: kumo-docker-release-local.artylab.expedia.biz/library/app-operator
+  newTag: ab49a71e6e79e00707381a93097b7c3e6632b8bf

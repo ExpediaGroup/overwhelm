@@ -1,0 +1,12 @@
+# This is a sample of a ConfigMap used for templating purposes.
+# For instance, this would allow you to create "Application" resources with a configuration that
+# uses the variable {{ .egdata.environment }}, which overwhelm would automatically render as "test"
+apiVersion: v1
+data:
+  environment: test
+kind: ConfigMap
+metadata:
+  name: egdata-properties
+  namespace: kube-public
+  labels:
+    "k8s.overwhelm.com/render-values-source": "egdata"

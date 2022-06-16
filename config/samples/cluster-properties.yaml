@@ -1,0 +1,15 @@
+# This is a sample of a ConfigMap used for templating purposes.
+# For instance, this would allow you to create "Application" resources with a configuration that
+# uses the variable {{ .cluster.account }}, which overwhelm would automatically render as "1234"
+apiVersion: v1
+data:
+  cluster: some-cluster
+  region: us-west-2
+  account: "1234"
+  segment: some-segment
+kind: ConfigMap
+metadata:
+  name: cluster-properties
+  namespace: kube-public
+  labels:
+    "k8s.overwhelm.com/render-values-source": "cluster"
