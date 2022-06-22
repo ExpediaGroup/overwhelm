@@ -15,6 +15,7 @@ package main
 
 import (
 	"flag"
+	helmControllerV1 "github.com/fluxcd/helm-controller/api/v2beta1"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -42,6 +43,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(corev1alpha1.AddToScheme(scheme))
+
+	utilruntime.Must(helmControllerV1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

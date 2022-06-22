@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-
+	helmControllerV1 "github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,6 +51,7 @@ var log logr.Logger
 //+kubebuilder:rbac:groups=core.expediagroup.com,resources=applications/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.expediagroup.com,resources=applications/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=helm.toolkit.fluxcd.io,resources=helmreleases,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -182,6 +183,38 @@ func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Applicati
 	}
 	return nil
 }
+
+func (r *ApplicationReconciler) createOrUpdateHelmRelease(application *corev1alpha1.Application, ctx context.Context) error {
+	hr := &helmControllerV1.HelmRelease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        application.Name,
+			Namespace:   application.Namespace,
+			Labels:      application.Labels,
+			Annotations: application.Annotations,
+		},
+		Spec: application.Spec.Spec,
+	}
+	if err := ctrl.SetControllerReference(application, hr, r.Scheme); err != nil {
+		return err
+	}
+	currentHR := helmControllerV1.HelmRelease{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: application.Namespace,
+		Name:      application.Name,
+	}, &currentHR); err != nil {
+		if err := r.Create(ctx, hr); err != nil {
+			log.Error(errors.New("unable to create HelmRelease for Application"), "")
+			return err
+		}
+	} else {
+		if err := r.Update(ctx, hr); err != nil {
+			log.Error(errors.New("unable to update HelmRelease for Application"), "")
+			return err
+		}
+	}
+	return nil
+}
+
 func isDelimValid(delim string) bool {
 	r := regexp.MustCompile(`^.*([a-zA-Z0-9 ])+.*$`)
 	return len(delim) == 2 && !r.MatchString(delim)
@@ -191,5 +224,9 @@ func (r *ApplicationReconciler) CreateOrUpdateResources(application *corev1alpha
 	if err := r.createOrUpdateConfigMap(application, ctx); err != nil {
 		return err
 	}
+	if err := r.createOrUpdateHelmRelease(application, ctx); err != nil {
+		return err
+	}
+
 	return nil
 }

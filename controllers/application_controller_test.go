@@ -3,16 +3,29 @@ package controllers
 import (
 	"context"
 	"errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha1"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
+	helmControllerV1 "github.com/fluxcd/helm-controller/api/v2beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var (
+	scheme   = runtime.NewScheme()
+)
+
+func init() {
+
+	utilruntime.Must(helmControllerV1.AddToScheme(scheme))
+	//+kubebuilder:scaffold:scheme
+}
 
 var ctx context.Context
 
@@ -46,6 +59,18 @@ var application = &v1alpha1.Application{
 	},
 }
 
+var helmChartTemplate = &helmControllerV1.HelmChartTemplate{
+	Spec: helmControllerV1.HelmChartTemplateSpec{
+		Chart:   application.Name,
+		Version: application.APIVersion,
+		SourceRef: helmControllerV1.CrossNamespaceObjectReference{
+			Kind:      "HelmRepository",
+			Name:      "public-helm-virtual",
+			Namespace: "runtime",
+		},
+	},
+}
+
 func LoadTestPrerenderData() {
 	preRenderData["cluster"] = map[string]string{
 		"cluster": "some-cluster",
@@ -71,6 +96,21 @@ func cmEquals(key client.ObjectKey, expectedCM *v1.ConfigMap) func() error {
 			return nil
 		}
 		return errors.New("actual cm not equal to expected cm")
+	}
+}
+
+func hrEquals(key client.ObjectKey, expectedCM *helmControllerV1.HelmRelease) func() error {
+	return func() error {
+		actual := &helmControllerV1.HelmRelease{}
+		if err := k8sClient.Get(ctx, key, actual); err != nil {
+			return err
+		}
+
+		if Expect(actual.Spec).Should(Equal(expectedCM.Spec)) &&
+			Expect(actual.OwnerReferences).Should(Not(BeNil())) {
+			return nil
+		}
+		return errors.New("actual hr not equal to expected hr")
 	}
 }
 
@@ -122,6 +162,23 @@ var _ = Describe("Application controller", func() {
 
 				Eventually(
 					cmEquals(client.ObjectKey{Name: b.Name, Namespace: b.Namespace}, expected),
+					time.Second*5, time.Millisecond*500).Should(BeNil())
+			})
+			By("Creating a HelmRelease with the appropriate values", func() {
+				c := application.DeepCopy()
+				c.Name = "hr-app"
+				Expect(k8sClient.Create(ctx, c)).Should(Succeed())
+				expected := &helmControllerV1.HelmRelease{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        application.Name,
+						Namespace:   application.Namespace,
+						Labels:      application.Labels,
+						Annotations: application.Annotations,
+					},
+					Spec: application.Spec.Spec,
+				}
+				Eventually(
+					hrEquals(client.ObjectKey{Name: c.Name, Namespace: c.Namespace}, expected),
 					time.Second*5, time.Millisecond*500).Should(BeNil())
 			})
 

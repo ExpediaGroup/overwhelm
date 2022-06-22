@@ -239,6 +239,13 @@ catalog-build: opm ## Build a catalog image.
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
+.PHONY: kind-load
+kind-load: # Load the docker image into a kind cluster
+	kind load docker-image $(IMG) --name $(PROJECT)
+
+.PHONY: kind-debug # Build the image, load it in a Kind cluster and deploy all the necessary resources
+kind-debug: docker-build kind-load deploy
+
 .PHONY: run-delve
 run-delve: generate fmt vet manifests
 	go build -gcflags "all=-trimpath=$(shell go env GOPATH)" -o bin/manager main.go
