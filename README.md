@@ -33,7 +33,6 @@ Since this project is a Kubernetes operator triggered by resource creation, debu
 * Run `make undeploy` to remove your kubernetes resources once you are done
 
 ## Testing
-
 * Kubebuilder uses @Ginkgo and @Gomega test suites which are configured in controllers/suite_test.go
 * Run `make test` to test your changes. 
 * Reference materials: [Gomega](https://onsi.github.io/gomega/) and [Ginkgo](https://onsi.github.io/ginkgo/)
