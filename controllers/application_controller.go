@@ -18,20 +18,19 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"regexp"
+	"text/template"
 
+	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"regexp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-	"text/template"
-
-	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
 )
 
 // ApplicationReconciler reconciles an Application object
@@ -88,7 +87,6 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 		}
 	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -101,12 +99,10 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *ApplicationReconciler) createOrUpdateConfigMap(application *corev1alpha1.Application, ctx context.Context) error {
-
 	if err := r.renderValues(application); err != nil {
 		log.Error(err, "error rendering values", "values", application.Spec.Data)
 		return err
 	}
-
 	cm := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        application.Name,
@@ -148,12 +144,10 @@ func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Applicati
 	rightDelimiter := "}}"
 	preRenderer := &application.Spec.PreRenderer
 	if preRenderer != nil {
-
 		// when no pre-rendering is desired. Only Helm Templating
 		if preRenderer.EnableHelmTemplating && preRenderer.LeftDelimiter == "" && preRenderer.RightDelimiter == "" {
 			return nil
 		}
-
 		// when delimiters are specified but only partially
 		if preRenderer.LeftDelimiter == "" || preRenderer.RightDelimiter == "" {
 			if preRenderer.LeftDelimiter != "" || preRenderer.RightDelimiter != "" {
@@ -168,7 +162,6 @@ func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Applicati
 			}
 		}
 	}
-
 	for key, value := range values {
 		buf := new(bytes.Buffer)
 		tmpl, err := template.New("properties").Option("missingkey=error").Delims(leftDelimiter, rightDelimiter).Parse(value)
@@ -182,6 +175,7 @@ func (r *ApplicationReconciler) renderValues(application *corev1alpha1.Applicati
 	}
 	return nil
 }
+
 func isDelimValid(delim string) bool {
 	r := regexp.MustCompile(`^.*([a-zA-Z0-9 ])+.*$`)
 	return len(delim) == 2 && !r.MatchString(delim)

@@ -11,12 +11,11 @@ import (
 
 var preRenderData = make(map[string]map[string]string)
 
-const REFERENCE_LABEL = "k8s.overwhelm.com/render-values-source"
+const ReferenceLabel = "overwhelm.expediagroup.com/render-values-source"
 
 func LoadPreRenderData() {
-
 	labelOptions := informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-		opts.LabelSelector = REFERENCE_LABEL
+		opts.LabelSelector = ReferenceLabel
 	})
 	factory := informers.NewSharedInformerFactoryWithOptions(kubernetes.NewForConfigOrDie(ctrl.GetConfigOrDie()), 0, labelOptions)
 	informer := factory.Core().V1().ConfigMaps().Informer()
@@ -24,13 +23,13 @@ func LoadPreRenderData() {
 	defer close(stop)
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(cm interface{}) {
-			preRenderData[cm.(*v1.ConfigMap).Labels[REFERENCE_LABEL]] = cm.(*v1.ConfigMap).Data
+			preRenderData[cm.(*v1.ConfigMap).Labels[ReferenceLabel]] = cm.(*v1.ConfigMap).Data
 		},
 		UpdateFunc: func(oldCM interface{}, cm interface{}) {
-			preRenderData[cm.(*v1.ConfigMap).Labels[REFERENCE_LABEL]] = cm.(*v1.ConfigMap).Data
+			preRenderData[cm.(*v1.ConfigMap).Labels[ReferenceLabel]] = cm.(*v1.ConfigMap).Data
 		},
 		DeleteFunc: func(cm interface{}) {
-			delete(preRenderData, cm.(*v1.ConfigMap).Labels[REFERENCE_LABEL])
+			delete(preRenderData, cm.(*v1.ConfigMap).Labels[ReferenceLabel])
 		},
 	})
 	informer.Run(stop)
