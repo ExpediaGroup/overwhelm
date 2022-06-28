@@ -1,7 +1,7 @@
 # overwhelm
 ![test](https://github.com/ExpediaGroup/overwhelm/workflows/test/badge.svg?branch=master)
 
-Overwhelm is an operator that facilitate application deployment on Kubernetes.
+Overwhelm is an operator that facilitates application deployment on Kubernetes.
 
 Traditionally, deploying an application on Kubernetes consists of creating multiple resources.
 Rather than having to create multiple resources and monitor them separately, Overwhelm aims to
