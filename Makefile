@@ -108,6 +108,10 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
+
+.PHONY: pretest
+pretest: manifests generate fmt vet envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)"
 ##@ Build
 
 .PHONY: build
@@ -120,11 +124,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} --target prod .
-
-.PHONY: docker-build-debug
-docker-build-debug: test ## Build docker image with the manager.
-	docker build -t ${IMG} --target debug .
+	docker build -t ${IMG}
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.

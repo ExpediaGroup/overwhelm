@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"errors"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"strconv"
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha1"
@@ -11,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var ctx context.Context
@@ -28,19 +30,24 @@ var application = &v1alpha1.Application{
 		},
 	},
 	Spec: v1alpha1.ApplicationSpec{
-		Spec: v2beta1.HelmReleaseSpec{
-			Chart: v2beta1.HelmChartTemplate{
-				Spec: v2beta1.HelmChartTemplateSpec{
-					Chart:   "good-chart",
-					Version: "0.0.1",
-					SourceRef: v2beta1.CrossNamespaceObjectReference{
-						Kind: "HelmRepository",
-						Name: "public-helm-virtual",
-					},
-				}},
-			Interval:    metav1.Duration{Duration: time.Millisecond * 250},
-			ReleaseName: "hr-test",
-			Timeout:     &metav1.Duration{Duration: time.Millisecond * 10},
+		Template: v1alpha1.ReleaseTemplate{
+			Metadata: v1alpha1.Metadata{
+				Labels: map[string]string{"test-temp-label": "ok"},
+			},
+			Spec: v2beta1.HelmReleaseSpec{
+				Chart: v2beta1.HelmChartTemplate{
+					Spec: v2beta1.HelmChartTemplateSpec{
+						Chart:   "good-chart",
+						Version: "0.0.1",
+						SourceRef: v2beta1.CrossNamespaceObjectReference{
+							Kind: "HelmRepository",
+							Name: "public-helm-virtual",
+						},
+					}},
+				Interval:    metav1.Duration{Duration: time.Millisecond * 250},
+				ReleaseName: "hr-test",
+				Timeout:     &metav1.Duration{Duration: time.Millisecond * 10},
+			},
 		},
 		Data: map[string]string{"values.yaml": "deployment : hello-world \naccount : {{ .cluster.account }}\nregion : {{ .cluster.region }}\nenvironment : {{ .egdata.environment }}"},
 	},
@@ -59,12 +66,15 @@ func LoadTestPrerenderData() {
 }
 
 func cmEquals(key client.ObjectKey, expectedCM *v1.ConfigMap) func() error {
+	var log = ctrllog.FromContext(ctx)
+	log.Info("cmKeys", "keys", key)
 	return func() error {
 		actual := &v1.ConfigMap{}
+
 		if err := k8sClient.Get(ctx, key, actual); err != nil {
+			log.Error(err, "error getting configMap")
 			return err
 		}
-
 		if Expect(actual.Data).Should(Equal(expectedCM.Data)) &&
 			Expect(actual.Labels).Should(Equal(expectedCM.Labels)) &&
 			Expect(actual.OwnerReferences).Should(Not(BeNil())) {
@@ -88,16 +98,51 @@ var _ = Describe("Application controller", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        a.Name,
 						Namespace:   a.Namespace,
-						Labels:      a.Labels,
+						Labels:      map[string]string{"test-temp-label": "ok", "app.kubernetes.io/managed-by": "overwhelm"},
 						Annotations: a.Annotations,
 					},
 					Data: map[string]string{"values.yaml": "deployment : hello-world \naccount : 1234\nregion : us-west-2\nenvironment : test"},
 				}
-				expected.Labels["app.kubernetes.io/managed-by"] = "overwhelm"
 
 				Eventually(
 					cmEquals(client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, expected),
 					time.Second*5, time.Millisecond*500).Should(BeNil())
+
+			})
+			By("Updating Application Status with HR Status", func() {
+				a := application.DeepCopy()
+				a.Name = "a-app"
+				hr := &v2beta1.HelmRelease{}
+				Eventually(
+					func(ctx context.Context, key client.ObjectKey, hr *v2beta1.HelmRelease) func() error {
+						return func() error {
+							return k8sClient.Get(ctx, key, hr)
+						}
+					}(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, hr), time.Second*5, time.Second*2).Should(BeNil())
+				hr.Status.ObservedGeneration = 1
+				conditions := []metav1.Condition{{
+					Type:               "READY",
+					Status:             metav1.ConditionStatus(v1.ConditionTrue),
+					ObservedGeneration: 1,
+					LastTransitionTime: metav1.NewTime(time.Now()),
+					Message:            "Helm Release Reconciled",
+					Reason:             "Ready",
+				}}
+				hr.SetConditions(conditions)
+				Expect(k8sClient.Status().Update(ctx, hr)).Should(BeNil())
+				app := &v1alpha1.Application{}
+				Eventually(
+					func(ctx context.Context, key client.ObjectKey, app *v1alpha1.Application) func() error {
+						return func() error {
+							if err := k8sClient.Get(ctx, client.ObjectKey{Name: "a-app", Namespace: application.Namespace}, app); err != nil {
+								return err
+							}
+							if app.Status.Conditions[0].Status != metav1.ConditionStatus(v1.ConditionTrue) {
+								return errors.New("app status not updated with hr status")
+							}
+							return nil
+						}
+					}(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, app), time.Second*5, time.Second*2).Should(BeNil())
 			})
 			By("Creating a new ConfigMap and rendering it with custom delimiter", func() {
 				b := application.DeepCopy()
@@ -111,22 +156,54 @@ var _ = Describe("Application controller", func() {
 				Expect(k8sClient.Create(ctx, b)).Should(Succeed())
 				expected := &v1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:        b.Name,
-						Namespace:   b.Namespace,
-						Labels:      b.Labels,
-						Annotations: b.Annotations,
+						Name:      b.Name,
+						Namespace: b.Namespace,
+						Labels:    map[string]string{"test-temp-label": "ok", "app.kubernetes.io/managed-by": "overwhelm"},
 					},
 					Data: map[string]string{"values.yaml": "deployment : hello-world \naccount : {{ .cluster.account }}\nregion : us-west-2\nenvironment : {{ .egdata.environment }}"},
 				}
-				expected.Labels["app.kubernetes.io/managed-by"] = "overwhelm"
 
 				Eventually(
 					cmEquals(client.ObjectKey{Name: b.Name, Namespace: b.Namespace}, expected),
 					time.Second*5, time.Millisecond*500).Should(BeNil())
 			})
+			By("Updating HelmRelease and configmap resources when application is updated", func() {
+				a := application.DeepCopy()
+				a.Name = "a-app"
+				currentApp := &v1alpha1.Application{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, currentApp)).Should(BeNil())
+				a.ResourceVersion = currentApp.ResourceVersion
+				a.Spec.Template.Spec.Interval = metav1.Duration{Duration: time.Millisecond * 500}
+				a.Spec.Data = map[string]string{"values.yaml": "deployment : hello-world-is-updated \naccount : 1234\nregion : us-west-2\nenvironment : test"}
 
+				expected := &v1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        a.Name,
+						Namespace:   a.Namespace,
+						Labels:      map[string]string{"test-temp-label": "ok", "app.kubernetes.io/managed-by": "overwhelm"},
+						Annotations: a.Annotations,
+					},
+					Data: map[string]string{"values.yaml": "deployment : hello-world-is-updated \naccount : 1234\nregion : us-west-2\nenvironment : test"},
+				}
+				Expect(k8sClient.Update(ctx, a)).Should(Succeed())
+				hr := &v2beta1.HelmRelease{}
+				Eventually(
+					func(ctx context.Context, key client.ObjectKey, hr *v2beta1.HelmRelease) func() error {
+						return func() error {
+							if err := k8sClient.Get(ctx, key, hr); err != nil {
+								return err
+							}
+							if hr.Generation != 2 {
+								return errors.New("hr Generation not updated and is " + strconv.Itoa(int(hr.Generation)))
+							}
+							return nil
+						}
+					}(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, hr), time.Second*5, time.Second*2).Should(BeNil())
+				Eventually(
+					cmEquals(client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, expected),
+					time.Second*5, time.Millisecond*500).Should(BeNil())
+			})
 		})
-
 	})
 	It("Should Fail Resource Creation", func() {
 		By("having missing rendering keys in values", func() {

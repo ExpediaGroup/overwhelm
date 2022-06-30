@@ -43,3 +43,23 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - helm.toolkit.fluxcd.io
+  resources:
+  - helmreleases
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - helm.toolkit.fluxcd.io
+  resources:
+  - helmreleases/status
+  verbs:
+  - get
+  - patch
+  - update

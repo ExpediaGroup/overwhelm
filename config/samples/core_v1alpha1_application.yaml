@@ -5,22 +5,30 @@ kind: Application
 metadata:
   name: application-sample
   namespace: app-namespace
+  labels:
+    test: 'yes'
 spec:
-  spec:
-    interval: 10m
-    chart:
-      spec:
-        chart: some-chart-name
-        version: '0.0.1'
-        sourceRef:
-          name: public-helm-virtual
-          kind: HelmRepository
+  template:
+    metadata:
+      annotations:
+        ann: 'yes'
+      labels:
+        test: 'no'
+    spec:
+      interval: 4m
+      chart:
+        spec:
+          chart: some-chart-name
+          version: '0.0.1'
+          sourceRef:
+            name: public-helm-virtual
+            kind: HelmRepository
   data:
     values.yaml: |-
       deployment : hello-world
-      account : {{ .cluster.account }}
-      region : {{ .cluster.region }}
-      environment : {{ .egdata.environment }}
+#      account : {{ .cluster.account }}
+#      region : {{ .cluster.region }}
+#      environment : {{ .egdata.environment }}
 
 
 
