@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-	"strconv"
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha1"
@@ -77,7 +76,8 @@ func cmEquals(key client.ObjectKey, expectedCM *v1.ConfigMap) func() error {
 		}
 		if Expect(actual.Data).Should(Equal(expectedCM.Data)) &&
 			Expect(actual.Labels).Should(Equal(expectedCM.Labels)) &&
-			Expect(actual.OwnerReferences).Should(Not(BeNil())) {
+			Expect(actual.OwnerReferences).Should(Not(BeNil())) &&
+			Expect(actual.OwnerReferences[0].UID).Should(Equal(expectedCM.OwnerReferences[0].UID)) {
 			return nil
 		}
 		return errors.New("actual cm not equal to expected cm")
@@ -89,36 +89,54 @@ var _ = Describe("Application controller", func() {
 	LoadTestPrerenderData()
 
 	Context("When creating an Application resource", func() {
+
 		It("Should Deploy Successfully", func() {
+
 			By("Creating a new ConfigMap and rendering it with default delimiter", func() {
 				a := application.DeepCopy()
 				a.Name = "a-app"
 				Expect(k8sClient.Create(ctx, a)).Should(Succeed())
+				key := client.ObjectKey{Name: a.Name, Namespace: a.Namespace}
 				expected := &v1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        a.Name,
 						Namespace:   a.Namespace,
 						Labels:      map[string]string{"test-temp-label": "ok", "app.kubernetes.io/managed-by": "overwhelm"},
 						Annotations: a.Annotations,
+						OwnerReferences: []metav1.OwnerReference{{
+							UID: a.GetUID(),
+						}},
 					},
+
 					Data: map[string]string{"values.yaml": "deployment : hello-world \naccount : 1234\nregion : us-west-2\nenvironment : test"},
 				}
-
+				Eventually(cmEquals(key, expected), time.Second*5, time.Millisecond*500).Should(BeNil())
+				hr := &v2beta1.HelmRelease{}
 				Eventually(
-					cmEquals(client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, expected),
-					time.Second*5, time.Millisecond*500).Should(BeNil())
-
+					func(ctx context.Context, key client.ObjectKey, hr *v2beta1.HelmRelease) func() error {
+						return func() error {
+							if err := k8sClient.Get(ctx, key, hr); err != nil {
+								return err
+							}
+							if hr.OwnerReferences == nil || hr.OwnerReferences[0].UID != a.GetUID() {
+								return errors.New("HelmRelease has owner reference or has incorrect owner reference")
+							}
+							return nil
+						}
+					}(ctx, key, hr), time.Second*5, time.Second*2).Should(BeNil())
 			})
+
 			By("Updating Application Status with HR Status", func() {
 				a := application.DeepCopy()
 				a.Name = "a-app"
+				key := client.ObjectKey{Name: a.Name, Namespace: a.Namespace}
 				hr := &v2beta1.HelmRelease{}
 				Eventually(
 					func(ctx context.Context, key client.ObjectKey, hr *v2beta1.HelmRelease) func() error {
 						return func() error {
 							return k8sClient.Get(ctx, key, hr)
 						}
-					}(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, hr), time.Second*5, time.Second*2).Should(BeNil())
+					}(ctx, key, hr), time.Second*5, time.Second*2).Should(BeNil())
 				hr.Status.ObservedGeneration = 1
 				conditions := []metav1.Condition{{
 					Type:               "READY",
@@ -142,8 +160,9 @@ var _ = Describe("Application controller", func() {
 							}
 							return nil
 						}
-					}(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, app), time.Second*5, time.Second*2).Should(BeNil())
+					}(ctx, key, app), time.Second*5, time.Second*2).Should(BeNil())
 			})
+
 			By("Creating a new ConfigMap and rendering it with custom delimiter", func() {
 				b := application.DeepCopy()
 				b.Name = "b-app"
@@ -154,24 +173,28 @@ var _ = Describe("Application controller", func() {
 				}
 				b.Spec.Data = map[string]string{"values.yaml": "deployment : hello-world \naccount : {{ .cluster.account }}\nregion : <% .cluster.region %>\nenvironment : {{ .egdata.environment }}"}
 				Expect(k8sClient.Create(ctx, b)).Should(Succeed())
+				key := client.ObjectKey{Name: b.Name, Namespace: b.Namespace}
 				expected := &v1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      b.Name,
 						Namespace: b.Namespace,
 						Labels:    map[string]string{"test-temp-label": "ok", "app.kubernetes.io/managed-by": "overwhelm"},
+						OwnerReferences: []metav1.OwnerReference{{
+							UID: b.GetUID(),
+						}},
 					},
 					Data: map[string]string{"values.yaml": "deployment : hello-world \naccount : {{ .cluster.account }}\nregion : us-west-2\nenvironment : {{ .egdata.environment }}"},
 				}
 
-				Eventually(
-					cmEquals(client.ObjectKey{Name: b.Name, Namespace: b.Namespace}, expected),
-					time.Second*5, time.Millisecond*500).Should(BeNil())
+				Eventually(cmEquals(key, expected), time.Second*5, time.Millisecond*500).Should(BeNil())
 			})
+
 			By("Updating HelmRelease and configmap resources when application is updated", func() {
 				a := application.DeepCopy()
 				a.Name = "a-app"
+				key := client.ObjectKey{Name: a.Name, Namespace: a.Namespace}
 				currentApp := &v1alpha1.Application{}
-				Expect(k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, currentApp)).Should(BeNil())
+				Expect(k8sClient.Get(ctx, key, currentApp)).Should(BeNil())
 				a.ResourceVersion = currentApp.ResourceVersion
 				a.Spec.Template.Spec.Interval = metav1.Duration{Duration: time.Millisecond * 500}
 				a.Spec.Data = map[string]string{"values.yaml": "deployment : hello-world-is-updated \naccount : 1234\nregion : us-west-2\nenvironment : test"}
@@ -182,6 +205,9 @@ var _ = Describe("Application controller", func() {
 						Namespace:   a.Namespace,
 						Labels:      map[string]string{"test-temp-label": "ok", "app.kubernetes.io/managed-by": "overwhelm"},
 						Annotations: a.Annotations,
+						OwnerReferences: []metav1.OwnerReference{{
+							UID: currentApp.GetUID(),
+						}},
 					},
 					Data: map[string]string{"values.yaml": "deployment : hello-world-is-updated \naccount : 1234\nregion : us-west-2\nenvironment : test"},
 				}
@@ -193,30 +219,33 @@ var _ = Describe("Application controller", func() {
 							if err := k8sClient.Get(ctx, key, hr); err != nil {
 								return err
 							}
-							if hr.Generation != 2 {
-								return errors.New("hr Generation not updated and is " + strconv.Itoa(int(hr.Generation)))
+							if hr.Generation != 2 || hr.Status.ObservedGeneration != 1 {
+								return errors.New("HelmRelease generations not updated")
+							}
+							if hr.OwnerReferences == nil || hr.OwnerReferences[0].UID != a.GetUID() {
+								return errors.New("HelmRelease has owner reference or has incorrect owner reference")
 							}
 							return nil
 						}
-					}(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, hr), time.Second*5, time.Second*2).Should(BeNil())
-				Eventually(
-					cmEquals(client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, expected),
-					time.Second*5, time.Millisecond*500).Should(BeNil())
+					}(ctx, key, hr), time.Second*5, time.Second*2).Should(BeNil())
+				Eventually(cmEquals(key, expected), time.Second*5, time.Millisecond*500).Should(BeNil())
 			})
+
 		})
 	})
+
 	It("Should Fail Resource Creation", func() {
+
 		By("having missing rendering keys in values", func() {
 			c := application.DeepCopy()
 			c.Name = "c-app"
 			c.Spec.Data = map[string]string{"values.yaml": "deployment : hello-world \naccount : {{ .cluster.someKey }}\nregion : <% .cluster.region %>\nenvironment : {{ .egdata.environment }}"}
 			Expect(k8sClient.Create(ctx, c)).Should(Succeed())
 			expected := &v1.ConfigMap{}
-
-			Eventually(
-				cmEquals(client.ObjectKey{Name: c.Name, Namespace: c.Namespace}, expected),
-				time.Second*5, time.Millisecond*500).Should(Not(BeNil()))
+			key := client.ObjectKey{Name: c.Name, Namespace: c.Namespace}
+			Eventually(cmEquals(key, expected), time.Second*5, time.Millisecond*500).Should(Not(BeNil()))
 		})
+
 		By("having missing custom rendering keys in values", func() {
 			d := application.DeepCopy()
 			d.Name = "d-app"
@@ -228,10 +257,8 @@ var _ = Describe("Application controller", func() {
 			d.Spec.Data = map[string]string{"values.yaml": "deployment : hello-world \naccount : <% .cluster.someKey %>\nregion : <% .cluster.region %>\nenvironment : {{ .egdata.environment }}"}
 			Expect(k8sClient.Create(ctx, d)).Should(Succeed())
 			expected := &v1.ConfigMap{}
-
-			Eventually(
-				cmEquals(client.ObjectKey{Name: d.Name, Namespace: d.Namespace}, expected),
-				time.Second*5, time.Millisecond*500).Should(Not(BeNil()))
+			key := client.ObjectKey{Name: d.Name, Namespace: d.Namespace}
+			Eventually(cmEquals(key, expected), time.Second*5, time.Millisecond*500).Should(Not(BeNil()))
 		})
 	})
 })

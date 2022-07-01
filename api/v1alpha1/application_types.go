@@ -71,10 +71,6 @@ type ApplicationStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// ValuesExist is a flag to indicate resource with the requested values exists
-	// +optional
-	ValuesExist string `json:"valuesExist,omitempty"`
-
 	// HelmReleaseResourceVersion is the helm release resource version
 	// +optional
 	HelmReleaseResourceVersion string `json:"helmReleaseResourceVersion,omitempty"`
@@ -83,34 +79,10 @@ type ApplicationStatus struct {
 	// +optional
 	ValuesResourceVersion string `json:"valuesResourceVersion,omitempty"`
 
-	// LastAttemptedValuesChecksum is the SHA1 checksum of the values of the last
-	// reconciliation attempt.
-	// +optional
-	LastAttemptedValuesChecksum string `json:"lastAttemptedValuesChecksum,omitempty"`
-
-	// LastApplicationRevision is the revision of the last successful Application.
-	// +optional
-	LastReleaseRevision int `json:"lastReleaseRevision,omitempty"`
-
-	// HelmChart is the namespaced name of the HelmChart resource created by
-	// the operator.
-	// +optional
-	HelmChart string `json:"helmChart,omitempty"`
-
 	// Failures is the reconciliation failure count against the latest desired
 	// state. It is reset after a successful reconciliation.
 	// +optional
 	Failures int64 `json:"failures,omitempty"`
-
-	// InstallFailures is the install failure count against the latest desired
-	// state. It is reset after a successful reconciliation.
-	// +optional
-	InstallFailures int64 `json:"installFailures,omitempty"`
-
-	// UpgradeFailures is the upgrade failure count against the latest desired
-	// state. It is reset after a successful reconciliation.
-	// +optional
-	UpgradeFailures int64 `json:"upgradeFailures,omitempty"`
 }
 
 // +genclient

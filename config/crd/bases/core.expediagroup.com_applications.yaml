@@ -881,40 +881,14 @@ spec:
                   the latest desired state. It is reset after a successful reconciliation.
                 format: int64
                 type: integer
-              helmChart:
-                description: HelmChart is the namespaced name of the HelmChart resource
-                  created by the operator.
-                type: string
               helmReleaseResourceVersion:
                 description: HelmReleaseResourceVersion is the helm release resource
                   version
                 type: string
-              installFailures:
-                description: InstallFailures is the install failure count against
-                  the latest desired state. It is reset after a successful reconciliation.
-                format: int64
-                type: integer
-              lastAttemptedValuesChecksum:
-                description: LastAttemptedValuesChecksum is the SHA1 checksum of the
-                  values of the last reconciliation attempt.
-                type: string
-              lastReleaseRevision:
-                description: LastApplicationRevision is the revision of the last successful
-                  Application.
-                type: integer
               observedGeneration:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
                 type: integer
-              upgradeFailures:
-                description: UpgradeFailures is the upgrade failure count against
-                  the latest desired state. It is reset after a successful reconciliation.
-                format: int64
-                type: integer
-              valuesExist:
-                description: ValuesExist is a flag to indicate resource with the requested
-                  values exists
-                type: string
               valuesResourceVersion:
                 description: ValuesResourceVersion is the resource version of the
                   resource that contains the helm values

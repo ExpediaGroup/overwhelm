@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -90,8 +89,6 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				return ctrl.Result{}, err
 			}
 		}
-		//log.Error(errors.New(strconv.FormatInt(application.Status.ObservedGeneration, 10)), "first "+application.Name+" Observed gen "+strconv.FormatInt(application.Generation, 10))
-
 		// New Application and Application update are identified by gen and observed gen mismatch
 		if application.Status.ObservedGeneration != application.Generation {
 			application.Status.ObservedGeneration = application.Generation
@@ -121,11 +118,6 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	} else {
 		if controllerutil.ContainsFinalizer(application, FinalizerName) {
 			// Pre Delete actions go here.
-			// Even though we are setting owner references, we need to delete the HR and CM manually in case
-			// there is a CM or HR out there with older owner reference or no owner reference
-			if err = r.reconcileDelete(ctx, req.NamespacedName); err != nil {
-				return ctrl.Result{}, err
-			}
 			patch := client.MergeFrom(application.DeepCopy())
 			controllerutil.RemoveFinalizer(application, FinalizerName)
 			if err = r.Patch(ctx, application, patch); err != nil {
@@ -145,39 +137,6 @@ func (r *ApplicationReconciler) patchStatus(ctx context.Context, application *v1
 	return r.Status().Patch(ctx, application, client.MergeFrom(latest))
 }
 
-func (r *ApplicationReconciler) reconcileDelete(ctx context.Context, namespacedName types.NamespacedName) error {
-	cm := &corev1.ConfigMap{}
-	var err error
-	if err = r.Get(ctx, types.NamespacedName{
-		Namespace: namespacedName.Namespace,
-		Name:      namespacedName.Name,
-	}, cm); err != nil && !apierrors.IsNotFound(err) {
-		err = fmt.Errorf("failed to retrieve configmap to delete : %w", err)
-		return err
-	}
-	if err == nil {
-		if err = r.Delete(ctx, cm); err != nil {
-			err = fmt.Errorf("failed to delete configmap : %w", err)
-			return err
-		}
-	}
-	hr := &v2beta1.HelmRelease{}
-	if err = r.Get(ctx, types.NamespacedName{
-		Namespace: namespacedName.Namespace,
-		Name:      namespacedName.Name,
-	}, hr); err != nil && !apierrors.IsNotFound(err) {
-		err = fmt.Errorf("failed to retrieve helmrelease to delete : %w", err)
-		return err
-	}
-	if err == nil {
-		if err = r.Delete(ctx, hr); err != nil {
-			err = fmt.Errorf("failed to delete helmrelease : %w", err)
-			return err
-		}
-	}
-	return nil
-}
-
 func (r *ApplicationReconciler) reconcileHRStatus(application *v1.Application, ctx context.Context) error {
 	hr := v2beta1.HelmRelease{}
 	err := r.Get(ctx, types.NamespacedName{
@@ -185,7 +144,7 @@ func (r *ApplicationReconciler) reconcileHRStatus(application *v1.Application, c
 		Name:      application.Name,
 	}, &hr)
 	if err == nil && hr.ResourceVersion != application.Status.HelmReleaseResourceVersion {
-		err = errors.New("Helm Release not updated")
+		err = errors.New("HelmRelease not updated")
 	}
 
 	if err != nil {
@@ -203,7 +162,7 @@ func (r *ApplicationReconciler) reconcileHRStatus(application *v1.Application, c
 	application.Status.Failures = 0
 	if hr.Status.ObservedGeneration != hr.Generation {
 		v1.AppErrorStatus(application, "updated Helm Release status not available")
-		return errors.New("Helm Release status is not current")
+		return errors.New("HelmRelease status is not current")
 	}
 	application.Status.Conditions = hr.GetConditions()
 	return nil
