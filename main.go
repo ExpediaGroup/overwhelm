@@ -16,20 +16,21 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
+	"github.com/ExpediaGroup/overwhelm/controllers"
+	"github.com/fluxcd/helm-controller/api/v2beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
-	"github.com/ExpediaGroup/overwhelm/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -41,6 +42,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
+	utilruntime.Must(v2beta1.AddToScheme(scheme))
 	utilruntime.Must(corev1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -49,9 +51,13 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var requeueInterval time.Duration
+	var retries int
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.DurationVar(&requeueInterval, "reconcile-requeue-interval", 3*time.Second, "Standard requeue interval for reconcile errors")
+	flag.IntVar(&retries, "retries", 3, "Number of retries when a resource is not found before giving up")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -81,8 +87,10 @@ func main() {
 	go controllers.LoadPreRenderData()
 
 	if err = (&controllers.ApplicationReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		RequeueInterval: requeueInterval,
+		Retries:         int64(retries),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)
