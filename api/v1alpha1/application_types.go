@@ -53,7 +53,7 @@ type ApplicationSpec struct {
 	// +optional
 	PreRenderer PreRenderer `json:"preRenderer,omitempty"`
 
-	// Release template of metadata and spec needed for the resources created by the Application Controller
+	// Template of Release metadata and spec needed for the resources created by the Application Controller
 	// +required
 	Template ReleaseTemplate `json:"template,omitempty"`
 }
@@ -114,10 +114,10 @@ type ApplicationList struct {
 func init() {
 	SchemeBuilder.Register(&Application{}, &ApplicationList{})
 }
+
 func AppInProgressStatus(application *Application) {
 	application.Status.Conditions = []metav1.Condition{}
 	condition := metav1.Condition{
-
 		Type:    meta.ReadyCondition,
 		Status:  metav1.ConditionUnknown,
 		Reason:  meta.ProgressingReason,
@@ -128,7 +128,6 @@ func AppInProgressStatus(application *Application) {
 
 func AppErrorStatus(application *Application, error string) {
 	condition := metav1.Condition{
-
 		Type:    meta.ReadyCondition,
 		Status:  metav1.ConditionFalse,
 		Reason:  meta.FailedReason,

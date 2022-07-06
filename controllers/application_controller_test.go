@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"errors"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha1"
@@ -12,7 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	client "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var ctx context.Context

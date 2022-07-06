@@ -17,6 +17,8 @@ To create a new CRD with the corresponding Go files:
 ```console
 operator-sdk create api --group core --version v1alpha1 --kind Application --resource=true --controller=true --namespaced=true
 ```
+## Prerequisite
+This project is based on golang 1.17. Make sure your GoRoot is configured to 1.17. If any other version then you may face issues.
 
 ## Debugging
 Since this project is a Kubernetes operator triggered by resource creation, debugging can be done using a remote debugger.
