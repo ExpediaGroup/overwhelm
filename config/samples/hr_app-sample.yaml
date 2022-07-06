@@ -1,0 +1,29 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: application-sample
+  namespace: app-namespace
+  ownerReferences:
+    - apiVersion: core.expediagroup.com/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Application
+      name: application-sample
+      uid: 4513161f-bce3-4792-8e04-d74676a1a2e7
+spec:
+  interval: 3m
+  chart:
+    spec:
+      chart: sample-chart
+      version: 1.0.0
+      sourceRef:
+        kind: HelmRepository
+        name: sample-chart
+      interval: 1m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+  test:
+    enable: false
+status:
+  observedGeneration: 1
