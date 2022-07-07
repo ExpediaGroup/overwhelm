@@ -85,9 +85,9 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if !controllerutil.ContainsFinalizer(application, FinalizerName) {
 			patch := client.MergeFrom(application.DeepCopy())
 			controllerutil.AddFinalizer(application, FinalizerName)
-			if err = r.Patch(ctx, application, patch); err != nil {
-				log.Error(err, "Error adding a finalizer")
-				return ctrl.Result{}, err
+			if patchErr := r.Patch(ctx, application, patch); patchErr != nil {
+				log.Error(patchErr, "Error adding a finalizer")
+				return ctrl.Result{}, patchErr
 			}
 		}
 		// New Application and Application update are identified by gen and observed gen mismatch
@@ -101,21 +101,33 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 		}
 		// Create or Update resources (configmap and HR) if not already installed
-		if err = r.CreateOrUpdateResources(application, ctx); err != nil {
+		if err = r.CreateOrUpdateResources(ctx, application); err != nil {
 			v1.AppErrorStatus(application, err.Error())
-			if err1 := r.patchStatus(ctx, application); err1 != nil {
-				return ctrl.Result{RequeueAfter: r.RequeueInterval}, err1
+			if patchErr := r.patchStatus(ctx, application); patchErr != nil {
+				return ctrl.Result{RequeueAfter: r.RequeueInterval}, patchErr
 			}
 			return ctrl.Result{}, err
 		}
 
 		// At this point the Helm Release can be reconciled
-		err = r.reconcileHRStatus(application, ctx)
-		if err1 := r.patchStatus(ctx, application); err1 != nil {
-			log.Error(err1, "Error updating application status")
-			return ctrl.Result{}, err1
+		hr, err := r.reconcileHelmReleaseStatus(ctx, application)
+		if patchErr := r.patchStatus(ctx, application); patchErr != nil {
+			log.Error(patchErr, "Error updating application status")
+			return ctrl.Result{}, patchErr
 		}
-		return ctrl.Result{}, err
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Retrieve the pod status
+		err = r.reconcilePodStatus(ctx, application, hr)
+		if patchErr := r.patchStatus(ctx, application); patchErr != nil {
+			log.Error(patchErr, "Error updating application status")
+			return ctrl.Result{}, patchErr
+		}
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	} else {
 		if controllerutil.ContainsFinalizer(application, FinalizerName) {
 			// Pre Delete actions go here.
@@ -138,7 +150,7 @@ func (r *ApplicationReconciler) patchStatus(ctx context.Context, application *v1
 	return r.Status().Patch(ctx, application, client.MergeFrom(latest))
 }
 
-func (r *ApplicationReconciler) reconcileHRStatus(application *v1.Application, ctx context.Context) error {
+func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, application *v1.Application) (*v2beta1.HelmRelease, error) {
 	hr := v2beta1.HelmRelease{}
 	err := r.Get(ctx, types.NamespacedName{
 		Namespace: application.Namespace,
@@ -155,17 +167,28 @@ func (r *ApplicationReconciler) reconcileHRStatus(application *v1.Application, c
 			} else {
 				v1.AppErrorStatus(application, err.Error())
 			}
-			return nil
+			return &hr, nil
 		}
 		application.Status.Failures++
-		return err
+		return nil, err
 	}
 	application.Status.Failures = 0
 	if hr.Status.ObservedGeneration != hr.Generation {
 		v1.AppErrorStatus(application, "updated Helm Release status not available")
-		return errors.New("HelmRelease status is not current")
+		return nil, errors.New("HelmRelease status is not current")
 	}
 	application.Status.Conditions = hr.GetConditions()
+	return &hr, nil
+}
+
+func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, application *v1.Application, helmRelease *v2beta1.HelmRelease) error {
+	// Analyze the status of the pods under the HR, if any
+	// TODO: use AppInProgressStatus and AppErrorStatus.. should also prob rename these two functions
+
+	// 1. Get list of pods under the HR (and make sure they're relevant to the current version)
+
+	// 2. analyze the pods using analyzer.Pod. I can probably just pick one tbh... but w/e
+
 	return nil
 }
 
@@ -178,7 +201,7 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *ApplicationReconciler) createOrUpdateConfigMap(application *v1.Application, ctx context.Context) error {
+func (r *ApplicationReconciler) createOrUpdateConfigMap(ctx context.Context, application *v1.Application) error {
 	currentCM := corev1.ConfigMap{}
 	currentCMError := r.Get(ctx, types.NamespacedName{
 		Namespace: application.Namespace,
@@ -276,15 +299,14 @@ func isDelimValid(delim string) bool {
 	return len(delim) == 2 && !r.MatchString(delim)
 }
 
-func (r *ApplicationReconciler) CreateOrUpdateResources(application *v1.Application, ctx context.Context) error {
-	if err := r.createOrUpdateConfigMap(application, ctx); err != nil {
+func (r *ApplicationReconciler) CreateOrUpdateResources(ctx context.Context, application *v1.Application) error {
+	if err := r.createOrUpdateConfigMap(ctx, application); err != nil {
 		return err
 	}
-	return r.createOrUpdateHelmRelease(application, ctx)
+	return r.createOrUpdateHelmRelease(ctx, application)
 }
 
-func (r *ApplicationReconciler) createOrUpdateHelmRelease(application *v1.Application, ctx context.Context) error {
-
+func (r *ApplicationReconciler) createOrUpdateHelmRelease(ctx context.Context, application *v1.Application) error {
 	newHR := &v2beta1.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        application.Name,
