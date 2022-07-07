@@ -83,7 +83,7 @@ spec:
                     type: string
                 type: object
               template:
-                description: Release template of metadata and spec needed for the
+                description: Template of Release metadata and spec needed for the
                   resources created by the Application Controller
                 properties:
                   metadata:
