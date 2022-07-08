@@ -17,6 +17,16 @@ To create a new CRD with the corresponding Go files:
 ```console
 operator-sdk create api --group core --version v1alpha1 --kind Application --resource=true --controller=true --namespaced=true
 ```
+
+## Running Overwhelm on Kind
+> ⚠ Make sure you have the required binaries installed. If you don't have them, execute `make kind-install-deps`
+- Create the Kind cluster by executing `make kind-create-cluster`
+- Deploy overwhelm by executing `make kind-deploy`
+- (optional) Install a dummy Application by executing `make kind-install-dummy-app`
+
+To clean the Kind cluster, execute `make kind-clean`.
+
+
 ## Prerequisite
 This project is based on golang 1.17. Make sure your GoRoot is configured to 1.17. If any other version then you may face issues.
 
