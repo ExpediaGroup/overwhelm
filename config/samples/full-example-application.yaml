@@ -1,0 +1,45 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  interval: 5m0s
+  url: https://stefanprodan.github.io/podinfo
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmChart
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  interval: 5m0s
+  chart: podinfo
+  reconcileStrategy: ChartVersion
+  sourceRef:
+    kind: HelmRepository
+    name: podinfo
+  version: '5.*'
+---
+# This is a sample of the Application Resource that, when deployed in a cluster, triggers the
+# overwhelm operator to perform its reconciliation logic
+apiVersion: core.expediagroup.com/v1alpha1
+kind: Application
+metadata:
+  name: podinfo
+  namespace: default
+  labels:
+    test: 'yes'
+spec:
+  template:
+    spec:
+      interval: 4m
+      chart:
+        spec:
+          chart: podinfo
+          sourceRef:
+            name: podinfo
+            kind: HelmRepository
+  data:
+    values.yaml: |-
+      deployment : hello-world
