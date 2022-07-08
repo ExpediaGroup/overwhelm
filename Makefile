@@ -4,7 +4,7 @@
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 PROJECT := overwhelm
-REGISTRY := expediagroup.com
+REGISTRY := ghcr.io/expediagroup
 VERSION := $(shell git rev-parse HEAD|| echo "v0.0.1") #may need to change this to tags if we are using tags
 IMG = $(REGISTRY)/$(PROJECT):$(VERSION)
 
@@ -31,11 +31,11 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# expediagroup.com/overwhelm-bundle:$VERSION and expediagroup.com/overwhelm-catalog:$VERSION.
-IMAGE_TAG_BASE ?= expediagroup.com/overwhelm
+# ghcr.io/expediagroup/overwhelm-bundle:$VERSION and ghcr.io/expediagroup/overwhelm-catalog:$VERSION.
+IMAGE_TAG_BASE ?= ghcr.io/expediagroup/overwhelm
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
-# You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
+# You can use it as an arg. (E.g make bundle-bu:q!ild BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
@@ -244,3 +244,29 @@ run-delve: generate fmt vet manifests
 	go build -gcflags "all=-trimpath=$(shell go env GOPATH)" -o bin/manager main.go
 	dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./bin/manager
 
+
+########
+# KIND #
+########
+
+.PHONY: kind-install-deps
+kind-install-deps:
+	curl -s https://fluxcd.io/install.sh | sudo bash
+
+.PHONY: kind-create-cluster
+kind-create-cluster:
+	kind create cluster --name overwhelm
+	flux install
+	kubectl create clusterrolebinding --serviceaccount=overwhelm-system:overwhelm-controller-manager --clusterrole=cluster-admin overwhelm-controller-manager
+
+.PHONY: kind-deploy
+kind-deploy: manifests kustomize docker-build deploy
+	kind load docker-image ${IMG} --name overwhelm
+
+.PHONY: kind-install-dummy-app
+kind-install-dummy-app:
+	kubectl apply -f config/samples/full-example-application.yaml
+
+.PHONY: kind-clean
+kind-clean:
+	kind delete cluster --name overwhelm
