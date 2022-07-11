@@ -3,12 +3,14 @@ package controllers
 import (
 	"context"
 	"errors"
+	"testing"
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha1"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -262,3 +264,28 @@ var _ = Describe("Application controller", func() {
 		})
 	})
 })
+
+func Test_extractReplicaSetNameFromDeployment(t *testing.T) {
+	tests := []struct {
+		name       string
+		deployment *appsv1.Deployment
+		want       string
+	}{
+		{
+			name: "",
+			deployment: &appsv1.Deployment{
+				Status: appsv1.DeploymentStatus{
+					Conditions: []appsv1.DeploymentCondition{{Type: appsv1.DeploymentProgressing, Message: `ReplicaSet "podinfo-55f99cdb4b" is progressing.`}},
+				},
+			},
+			want: "podinfo-55f99cdb4b",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := extractReplicaSetNameFromDeployment(tt.deployment); got != tt.want {
+				t.Errorf("extractReplicaSetNameFromDeployment() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

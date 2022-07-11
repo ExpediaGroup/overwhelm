@@ -15,6 +15,9 @@
 package v1alpha1
 
 import (
+	"fmt"
+
+	"github.com/ExpediaGroup/overwhelm/analyzer"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/fluxcd/pkg/apis/meta"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -132,6 +135,22 @@ func AppErrorStatus(application *Application, error string) {
 		Status:  metav1.ConditionFalse,
 		Reason:  meta.FailedReason,
 		Message: error,
+	}
+	apimeta.SetStatusCondition(&application.Status.Conditions, condition)
+}
+
+func AppAnalysisCondition(application *Application, result analyzer.Result) {
+	condition := metav1.Condition{
+		Type:   "Analysis", // Could be meta.ReadyCondition, but it would clash with the HR
+		Reason: "Healthy",
+	}
+	if result.Healthy {
+		condition.Status = metav1.ConditionTrue
+		condition.Message = "At least one new pod has progressed successfully"
+
+	} else {
+		condition.Status = metav1.ConditionFalse
+		condition.Message = fmt.Sprintf("%s %s is unhealthy: %v", result.ResourceType, result.ResourceName, result.Errors)
 	}
 	apimeta.SetStatusCondition(&application.Status.Conditions, condition)
 }

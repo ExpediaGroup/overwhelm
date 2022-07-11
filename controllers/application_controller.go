@@ -18,16 +18,23 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
+	"strings"
 	"text/template"
 	"time"
 
+	"github.com/ExpediaGroup/overwhelm/analyzer"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,7 +55,9 @@ type ApplicationReconciler struct {
 const (
 	FinalizerName = "overwhelm.expediagroup.com/finalizer"
 	ManagedBy     = "app.kubernetes.io/managed-by"
-	Application
+
+	AnnotationHelmReleaseName      = "meta.helm.sh/release-name"
+	AnnotationHelmReleaseNamespace = "meta.helm.sh/release-namespace"
 )
 
 var log logr.Logger
@@ -177,19 +186,86 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 		v1.AppErrorStatus(application, "updated Helm Release status not available")
 		return nil, errors.New("HelmRelease status is not current")
 	}
-	application.Status.Conditions = hr.GetConditions()
+	for _, condition := range hr.GetConditions() {
+		apimeta.SetStatusCondition(&application.Status.Conditions, condition)
+	}
 	return &hr, nil
 }
 
 func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, application *v1.Application, helmRelease *v2beta1.HelmRelease) error {
 	// Analyze the status of the pods under the HR, if any
 	// TODO: use AppInProgressStatus and AppErrorStatus.. should also prob rename these two functions
+	fmt.Println("reconciling pod status")
 
-	// 1. Get list of pods under the HR (and make sure they're relevant to the current version)
+	// 1. use meta.helm.sh/release-name and meta.helm.sh/release-namespace to get the deployment
+	// 2. get the spec.selector.matchLabels from the deployment
+	// 3. retrieve the pods using the deployment
 
-	// 2. analyze the pods using analyzer.Pod. I can probably just pick one tbh... but w/e
+	// XXX: This is for deployments. We need to make it clear that right now, this feature is "best effort".
+	var deploymentList appsv1.DeploymentList
+	if err := r.List(ctx, &deploymentList, &client.ListOptions{Namespace: helmRelease.GetReleaseNamespace()}); err != nil {
+		return err
+	}
 
+	var releaseDeployment *appsv1.Deployment
+	for _, deployment := range deploymentList.Items {
+		if deployment.GetAnnotations()[AnnotationHelmReleaseName] == helmRelease.GetReleaseName() && deployment.GetAnnotations()[AnnotationHelmReleaseNamespace] == helmRelease.GetReleaseNamespace() {
+			releaseDeployment = &deployment
+			break
+		}
+	}
+	if releaseDeployment == nil {
+		// We didn't find a release deployment, so no pod status.
+		return nil
+	}
+	// Get ReplicaSet name
+	replicaSetName := extractReplicaSetNameFromDeployment(releaseDeployment)
+	if replicaSetName == "" {
+		return errors.New("failed to extract ReplicaSet from Deployment")
+	}
+	// Make sure that the ReplicaSet name has the right format. This is optional, mostly for testing purposes.
+	replicaSetNameParts := strings.Split(replicaSetName, "-")
+	if len(replicaSetNameParts) != 2 {
+		return errors.New("invalid ReplicaSet name format: expected format <DEPLOYMENT-NAME>-<RANDOM-STRING>")
+	}
+	var replicaSet appsv1.ReplicaSet
+	if err := r.Get(ctx, types.NamespacedName{Namespace: releaseDeployment.Namespace, Name: replicaSetName}, &replicaSet); err != nil {
+		return fmt.Errorf("failed to get ReplicaSet %s: %w", replicaSetName, err)
+	}
+	// Unlike the Deployment's Spec.Selector.MatchLabels, ReplicaSet's match labels include pod-template-hash, which
+	// means we can use that to specifically target the pods of the version we want to analyze.
+	matchLabels := replicaSet.Spec.Selector.MatchLabels
+	var requirements []labels.Requirement
+	for key, value := range matchLabels {
+		requirement, err := labels.NewRequirement(key, selection.Equals, []string{value})
+		if err != nil {
+			return fmt.Errorf("error creating requirement from match label with key %s and value %s: %v", key, value, err)
+		}
+		requirements = append(requirements, *requirement)
+	}
+	podList := corev1.PodList{}
+	if err := r.List(ctx, &podList, &client.ListOptions{Namespace: application.Namespace, LabelSelector: labels.NewSelector().Add(requirements...), Limit: 1}); err != nil {
+		return err
+	}
+	for _, pod := range podList.Items {
+		result := analyzer.Pod(pod)
+		v1.AppAnalysisCondition(application, result)
+		break
+	}
 	return nil
+}
+
+func extractReplicaSetNameFromDeployment(deployment *appsv1.Deployment) string {
+	for _, condition := range deployment.Status.Conditions {
+		if condition.Type == appsv1.DeploymentProgressing {
+			words := strings.Fields(condition.Message)
+			if len(words) < 2 {
+				return ""
+			}
+			return strings.Trim(words[1], `"`)
+		}
+	}
+	return ""
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -344,6 +420,5 @@ func (r *ApplicationReconciler) createOrUpdateHelmRelease(ctx context.Context, a
 		}
 		application.Status.HelmReleaseResourceVersion = newHR.ResourceVersion
 	}
-
 	return nil
 }

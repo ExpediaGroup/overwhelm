@@ -260,8 +260,13 @@ kind-create-cluster:
 	kubectl create clusterrolebinding --serviceaccount=overwhelm-system:overwhelm-controller-manager --clusterrole=cluster-admin overwhelm-controller-manager
 
 .PHONY: kind-deploy
-kind-deploy: manifests kustomize docker-build deploy
+kind-deploy: manifests kustomize deploy docker-build
 	kind load docker-image ${IMG} --name overwhelm
+
+.PHONY: kind-debug
+kind-debug: manifests kustomize deploy
+	# After this, you can run overwhelm locally. Ignore the ImagePullBackOff from the overwhelm-controller-manager pod,
+	# just start overwhelm locally (i.e. via your IDE).
 
 .PHONY: kind-install-dummy-app
 kind-install-dummy-app:
