@@ -196,21 +196,18 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, application *v1.Application, helmRelease *v2beta1.HelmRelease) error {
 	// Analyze the status of the pods under the HR, if any
 	// TODO: use AppInProgressStatus and AppErrorStatus.. should also prob rename these two functions
-	fmt.Println("reconciling pod status")
-
-	// 1. use meta.helm.sh/release-name and meta.helm.sh/release-namespace to get the deployment
-	// 2. get the spec.selector.matchLabels from the deployment
-	// 3. retrieve the pods using the deployment
+	log.Info("Reconciling pod status")
 
 	// XXX: This is for deployments. We need to make it clear that right now, this feature is "best effort".
 	var deploymentList appsv1.DeploymentList
 	if err := r.List(ctx, &deploymentList, &client.ListOptions{Namespace: helmRelease.GetReleaseNamespace()}); err != nil {
 		return err
 	}
-
+	// Try to retrieve the deployment
 	var releaseDeployment *appsv1.Deployment
 	for _, deployment := range deploymentList.Items {
-		if deployment.GetAnnotations()[AnnotationHelmReleaseName] == helmRelease.GetReleaseName() && deployment.GetAnnotations()[AnnotationHelmReleaseNamespace] == helmRelease.GetReleaseNamespace() {
+		// TODO: Should use helmRelease.GetReleaseName() and helmRelease.GetReleaseNamespace()
+		if deployment.GetAnnotations()[AnnotationHelmReleaseName] == helmRelease.Name && deployment.GetAnnotations()[AnnotationHelmReleaseNamespace] == helmRelease.Namespace {
 			releaseDeployment = &deployment
 			break
 		}
@@ -219,11 +216,13 @@ func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, applicat
 		// We didn't find a release deployment, so no pod status.
 		return nil
 	}
+	log.Info("Found deployment", "deployment", releaseDeployment)
 	// Get ReplicaSet name
 	replicaSetName := extractReplicaSetNameFromDeployment(releaseDeployment)
 	if replicaSetName == "" {
 		return errors.New("failed to extract ReplicaSet from Deployment")
 	}
+	log.Info("Extracted ReplicaSet name", "name", replicaSetName)
 	// Make sure that the ReplicaSet name has the right format. This is optional, mostly for testing purposes.
 	replicaSetNameParts := strings.Split(replicaSetName, "-")
 	if len(replicaSetNameParts) != 2 {
@@ -249,6 +248,7 @@ func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, applicat
 		return err
 	}
 	for _, pod := range podList.Items {
+		log.Info("Found pod", "pod", podList.Items[0].GetName())
 		result := analyzer.Pod(pod)
 		v1.AppAnalysisCondition(application, result)
 		break
@@ -386,7 +386,7 @@ func (r *ApplicationReconciler) CreateOrUpdateResources(ctx context.Context, app
 func (r *ApplicationReconciler) createOrUpdateHelmRelease(ctx context.Context, application *v1.Application) error {
 	newHR := &v2beta1.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        application.Name,
+			Name:        application.Name, // FIXME: this should use application.Spec.Template.Spec.ReleaseName
 			Namespace:   application.Namespace,
 			Labels:      application.Spec.Template.Labels,
 			Annotations: application.Spec.Template.Annotations,

@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -45,13 +46,100 @@ var application = &v1alpha1.Application{
 							Kind: "HelmRepository",
 							Name: "public-helm-virtual",
 						},
-					}},
+					},
+				},
 				Interval:    metav1.Duration{Duration: time.Millisecond * 250},
 				ReleaseName: "hr-test",
 				Timeout:     &metav1.Duration{Duration: time.Millisecond * 10},
 			},
 		},
 		Data: map[string]string{"values.yaml": "deployment : hello-world \naccount : {{ .cluster.account }}\nregion : {{ .cluster.region }}\nenvironment : {{ .egdata.environment }}"},
+	},
+}
+
+var deployment = &appsv1.Deployment{
+	TypeMeta: metav1.TypeMeta{
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "appname",
+		Labels:    map[string]string{"app": "appname"},
+		Annotations: map[string]string{
+			AnnotationHelmReleaseName:      application.Spec.Template.Spec.ReleaseName,
+			AnnotationHelmReleaseNamespace: application.Namespace,
+		},
+	},
+	Spec: appsv1.DeploymentSpec{
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"app": "appname"},
+		},
+		Template: v1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{"app": "appname"},
+			},
+			Spec: v1.PodSpec{
+				Containers: []v1.Container{
+					{
+						Name:  "container",
+						Image: "good-image",
+					},
+				},
+			},
+		},
+	},
+}
+
+var replicaSet = &appsv1.ReplicaSet{
+	TypeMeta: metav1.TypeMeta{
+		APIVersion: "apps/v1",
+		Kind:       "ReplicaSet",
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "appname-55f99cdb4b",
+	},
+	Spec: appsv1.ReplicaSetSpec{
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"app": "appname", "pod-template-hash": "55f99cdb4b"},
+		},
+		Template: v1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{"app": "appname", "pod-template-hash": "55f99cdb4b"},
+			},
+			Spec: v1.PodSpec{
+				Containers: []v1.Container{
+					{
+						Name:  "container",
+						Image: "good-image",
+					},
+				},
+			},
+		},
+	},
+}
+
+var pod = &v1.Pod{
+	TypeMeta: metav1.TypeMeta{
+		APIVersion: "v1",
+		Kind:       "Pod",
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "appname-55f99cdb4b-eeeeeeee",
+		Labels: map[string]string{
+			"app":               "appname",
+			"pod-template-hash": "55f99cdb4b",
+		},
+	},
+	Spec: v1.PodSpec{
+		Containers: []v1.Container{
+			{
+				Name:  "container",
+				Image: "good-image",
+			},
+		},
 	},
 }
 
@@ -113,7 +201,7 @@ var _ = Describe("Application controller", func() {
 
 					Data: map[string]string{"values.yaml": "deployment : hello-world \naccount : 1234\nregion : us-west-2\nenvironment : test"},
 				}
-				Eventually(cmEquals(key, expected), time.Second*5, time.Millisecond*500).Should(BeNil())
+				Eventually(cmEquals(key, expected), 5*time.Second, 300*time.Millisecond).Should(BeNil())
 				hr := &v2beta1.HelmRelease{}
 				Eventually(
 					func(ctx context.Context, key client.ObjectKey, hr *v2beta1.HelmRelease) func() error {
@@ -126,7 +214,7 @@ var _ = Describe("Application controller", func() {
 							}
 							return nil
 						}
-					}(ctx, key, hr), time.Second*5, time.Second*2).Should(BeNil())
+					}(ctx, key, hr), 5*time.Second, 300*time.Millisecond).Should(BeNil())
 			})
 
 			By("Updating Application Status with HR Status", func() {
@@ -139,8 +227,9 @@ var _ = Describe("Application controller", func() {
 						return func() error {
 							return k8sClient.Get(ctx, key, hr)
 						}
-					}(ctx, key, hr), time.Second*5, time.Second*2).Should(BeNil())
+					}(ctx, key, hr), 5*time.Second, 300*time.Millisecond).Should(BeNil())
 				hr.Status.ObservedGeneration = 1
+				hr.Generation = hr.Status.ObservedGeneration
 				conditions := []metav1.Condition{{
 					Type:               meta.ReadyCondition,
 					Status:             metav1.ConditionStatus(v1.ConditionTrue),
@@ -155,7 +244,7 @@ var _ = Describe("Application controller", func() {
 				Eventually(
 					func(ctx context.Context, key client.ObjectKey, app *v1alpha1.Application) func() error {
 						return func() error {
-							if err := k8sClient.Get(ctx, client.ObjectKey{Name: "a-app", Namespace: application.Namespace}, app); err != nil {
+							if err := k8sClient.Get(ctx, key, app); err != nil {
 								return err
 							}
 							if app.Status.Conditions[0].Status != metav1.ConditionStatus(v1.ConditionTrue) {
@@ -163,11 +252,130 @@ var _ = Describe("Application controller", func() {
 							}
 							return nil
 						}
-					}(ctx, key, app), time.Second*5, time.Second*2).Should(BeNil())
+					}(ctx, key, app), 5*time.Second, 300*time.Millisecond).Should(BeNil())
 			})
 
 			By("Updating Application Status with pod Status", func() {
-
+				a := application.DeepCopy()
+				a.Name = "podstatus-app"
+				Expect(k8sClient.Create(ctx, a)).Should(Succeed())
+				hr := &v2beta1.HelmRelease{}
+				Eventually(
+					func(ctx context.Context, hr *v2beta1.HelmRelease) func() error {
+						return func() error {
+							return k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, hr)
+						}
+					}(ctx, hr), 5*time.Second, 300*time.Millisecond).Should(BeNil())
+				hr.Status.ObservedGeneration = 1
+				hr.Generation = hr.Status.ObservedGeneration
+				conditions := []metav1.Condition{{
+					Type:               meta.ReadyCondition,
+					Status:             metav1.ConditionStatus(v1.ConditionTrue),
+					ObservedGeneration: 1,
+					LastTransitionTime: metav1.NewTime(time.Now()),
+					Message:            "Helm Release Reconciled",
+					Reason:             meta.SucceededReason,
+				}}
+				hr.SetConditions(conditions)
+				Expect(k8sClient.Status().Update(ctx, hr)).Should(BeNil())
+				app := &v1alpha1.Application{}
+				Eventually(
+					func(ctx context.Context, app *v1alpha1.Application) func() error {
+						return func() error {
+							if err := k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, app); err != nil {
+								return err
+							}
+							return nil
+						}
+					}(ctx, app), 5*time.Second, 300*time.Millisecond).Should(BeNil())
+				deployment.Annotations[AnnotationHelmReleaseName] = a.Name
+				deployment.Annotations[AnnotationHelmReleaseNamespace] = a.Namespace
+				Expect(k8sClient.Create(ctx, deployment)).Should(Succeed())
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{
+					{
+						Status:             v1.ConditionTrue,
+						LastTransitionTime: metav1.NewTime(time.Now()),
+						Type:               appsv1.DeploymentProgressing,
+						Message:            `ReplicaSet "appname-55f99cdb4b" is progressing.`,
+						Reason:             "NewReplicaSetAvailable",
+					},
+				}
+				Expect(k8sClient.Status().Update(ctx, deployment)).Should(BeNil())
+				var deploymentList appsv1.DeploymentList
+				Eventually(
+					func(ctx context.Context, deploymentList appsv1.DeploymentList) func() error {
+						return func() error {
+							if err := k8sClient.List(ctx, &deploymentList, &client.ListOptions{Namespace: a.Namespace}); err != nil {
+								return err
+							}
+							if len(deploymentList.Items) != 1 {
+								return errors.New("failed to retrieve deployments")
+							}
+							return nil
+						}
+					}(ctx, deploymentList), 5*time.Second, 300*time.Millisecond).Should(BeNil())
+				Expect(k8sClient.Create(ctx, replicaSet)).Should(Succeed())
+				rs := &appsv1.ReplicaSet{}
+				Eventually(
+					func(ctx context.Context, rs *appsv1.ReplicaSet) func() error {
+						return func() error {
+							if err := k8sClient.Get(ctx, client.ObjectKey{Name: replicaSet.Name, Namespace: a.Namespace}, rs); err != nil {
+								return err
+							}
+							if rs == nil || rs.Name != replicaSet.Name {
+								return errors.New("failed to retrieve ReplicaSet")
+							}
+							return nil
+						}
+					}(ctx, rs), 5*time.Second, 300*time.Millisecond).Should(BeNil())
+				Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
+				pod.Status.Conditions = []v1.PodCondition{
+					{
+						Type:               v1.PodReady,
+						Status:             v1.ConditionFalse,
+						LastTransitionTime: metav1.NewTime(time.Now()),
+					},
+				}
+				pod.Status.ContainerStatuses = []v1.ContainerStatus{
+					{
+						Name:         "application",
+						Ready:        false,
+						RestartCount: 0,
+						State: v1.ContainerState{
+							Waiting: &v1.ContainerStateWaiting{Reason: "ImagePullBackOff", Message: `Back-off pulling image "secret/secret:secret"`},
+						},
+					},
+				}
+				Expect(k8sClient.Status().Update(ctx, pod)).Should(BeNil())
+				p := &v1.Pod{}
+				Eventually(
+					func(ctx context.Context, p *v1.Pod) func() error {
+						return func() error {
+							if err := k8sClient.Get(ctx, client.ObjectKey{Name: pod.Name, Namespace: a.Namespace}, p); err != nil {
+								return err
+							}
+							if p == nil || p.Name != pod.Name {
+								return errors.New("failed to retrieve pod")
+							}
+							return nil
+						}
+					}(ctx, p), 5*time.Second, 300*time.Millisecond).Should(BeNil())
+				Eventually(
+					func(ctx context.Context, app *v1alpha1.Application) func() error {
+						return func() error {
+							if err := k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, app); err != nil {
+								return err
+							}
+							fmt.Println(app.Status.Conditions)
+							if len(app.Status.Conditions) != 2 {
+								return errors.New("waiting for Analysis condition")
+							}
+							if app.Status.Conditions[1].Message != `Pod appname-55f99cdb4b-eeeeeeee is unhealthy: [container 'application' is not ready and is in a waiting state due to reason 'ImagePullBackOff' with message 'Back-off pulling image "secret/secret:secret"']` {
+								return errors.New("expected meaningful error message")
+							}
+							return nil
+						}
+					}(ctx, app), 5*time.Second, 300*time.Millisecond).Should(BeNil())
 			})
 
 			By("Creating a new ConfigMap and rendering it with custom delimiter", func() {
@@ -193,7 +401,7 @@ var _ = Describe("Application controller", func() {
 					Data: map[string]string{"values.yaml": "deployment : hello-world \naccount : {{ .cluster.account }}\nregion : us-west-2\nenvironment : {{ .egdata.environment }}"},
 				}
 
-				Eventually(cmEquals(key, expected), time.Second*5, time.Millisecond*500).Should(BeNil())
+				Eventually(cmEquals(key, expected), 5*time.Second, 300*time.Millisecond).Should(BeNil())
 			})
 
 			By("Updating HelmRelease and configmap resources when application is updated", func() {
@@ -234,8 +442,8 @@ var _ = Describe("Application controller", func() {
 							}
 							return nil
 						}
-					}(ctx, key, hr), time.Second*5, time.Second*2).Should(BeNil())
-				Eventually(cmEquals(key, expected), time.Second*5, time.Millisecond*500).Should(BeNil())
+					}(ctx, key, hr), 5*time.Second, 300*time.Millisecond).Should(BeNil())
+				Eventually(cmEquals(key, expected), 5*time.Second, 300*time.Millisecond).Should(BeNil())
 			})
 
 		})
