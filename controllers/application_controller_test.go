@@ -8,6 +8,7 @@ import (
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha1"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
+	"github.com/fluxcd/pkg/apis/meta"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -141,12 +142,12 @@ var _ = Describe("Application controller", func() {
 					}(ctx, key, hr), time.Second*5, time.Second*2).Should(BeNil())
 				hr.Status.ObservedGeneration = 1
 				conditions := []metav1.Condition{{
-					Type:               "READY",
+					Type:               meta.ReadyCondition,
 					Status:             metav1.ConditionStatus(v1.ConditionTrue),
 					ObservedGeneration: 1,
 					LastTransitionTime: metav1.NewTime(time.Now()),
 					Message:            "Helm Release Reconciled",
-					Reason:             "Ready",
+					Reason:             meta.SucceededReason,
 				}}
 				hr.SetConditions(conditions)
 				Expect(k8sClient.Status().Update(ctx, hr)).Should(BeNil())
@@ -163,6 +164,10 @@ var _ = Describe("Application controller", func() {
 							return nil
 						}
 					}(ctx, key, app), time.Second*5, time.Second*2).Should(BeNil())
+			})
+
+			By("Updating Application Status with pod Status", func() {
+
 			})
 
 			By("Creating a new ConfigMap and rendering it with custom delimiter", func() {
@@ -267,22 +272,20 @@ var _ = Describe("Application controller", func() {
 
 func Test_extractReplicaSetNameFromDeployment(t *testing.T) {
 	tests := []struct {
-		name       string
 		deployment *appsv1.Deployment
 		want       string
 	}{
 		{
-			name: "",
 			deployment: &appsv1.Deployment{
 				Status: appsv1.DeploymentStatus{
-					Conditions: []appsv1.DeploymentCondition{{Type: appsv1.DeploymentProgressing, Message: `ReplicaSet "podinfo-55f99cdb4b" is progressing.`}},
+					Conditions: []appsv1.DeploymentCondition{{Type: appsv1.DeploymentProgressing, Message: `ReplicaSet "podname-55f99cdb4b" is progressing.`}},
 				},
 			},
-			want: "podinfo-55f99cdb4b",
+			want: "podname-55f99cdb4b",
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.want, func(t *testing.T) {
 			if got := extractReplicaSetNameFromDeployment(tt.deployment); got != tt.want {
 				t.Errorf("extractReplicaSetNameFromDeployment() = %v, want %v", got, tt.want)
 			}

@@ -135,6 +135,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, patchErr
 		}
 		if err != nil {
+			log.Error(err, "Error reconciling pod status")
 			return ctrl.Result{}, err
 		}
 	} else {
