@@ -195,9 +195,7 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 
 func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, application *v1.Application, helmRelease *v2beta1.HelmRelease) error {
 	// Analyze the status of the pods under the HR, if any
-	// TODO: use AppInProgressStatus and AppErrorStatus.. should also prob rename these two functions
-	log.Info("Reconciling pod status")
-
+	log.Info("Reconciling pod status", "application", application.Name, "namespace", application.Namespace)
 	// XXX: This is for deployments. We need to make it clear that right now, this feature is "best effort".
 	var deploymentList appsv1.DeploymentList
 	if err := r.List(ctx, &deploymentList, &client.ListOptions{Namespace: helmRelease.GetReleaseNamespace()}); err != nil {
@@ -216,13 +214,13 @@ func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, applicat
 		// We didn't find a release deployment, so no pod status.
 		return nil
 	}
-	log.Info("Found deployment", "deployment", releaseDeployment)
+	log.Info("Found deployment", "deploymentName", releaseDeployment.Name, "application", application.Name, "namespace", application.Namespace)
 	// Get ReplicaSet name
 	replicaSetName := extractReplicaSetNameFromDeployment(releaseDeployment)
 	if replicaSetName == "" {
 		return errors.New("failed to extract ReplicaSet from Deployment")
 	}
-	log.Info("Extracted ReplicaSet name", "name", replicaSetName)
+	log.Info("Extracted ReplicaSet name", "replicaSetName", replicaSetName, "application", application.Name, "namespace", application.Namespace)
 	// Make sure that the ReplicaSet name has the right format. This is optional, mostly for testing purposes.
 	replicaSetNameParts := strings.Split(replicaSetName, "-")
 	if len(replicaSetNameParts) != 2 {
@@ -248,7 +246,7 @@ func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, applicat
 		return err
 	}
 	for _, pod := range podList.Items {
-		log.Info("Found pod", "pod", podList.Items[0].GetName())
+		log.Info("Analyzing pod", "podName", podList.Items[0].GetName(), "application", application.Name, "namespace", application.Namespace)
 		result := analyzer.Pod(pod)
 		v1.AppAnalysisCondition(application, result)
 		break
