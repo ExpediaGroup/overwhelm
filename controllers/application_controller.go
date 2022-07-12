@@ -119,7 +119,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		// At this point the Helm Release can be reconciled
-		hr, err := r.reconcileHelmReleaseStatus(ctx, application)
+		err := r.reconcileHelmReleaseStatus(ctx, application)
 		if patchErr := r.patchStatus(ctx, application); patchErr != nil {
 			log.Error(patchErr, "Error updating application status")
 			return ctrl.Result{}, patchErr
@@ -129,7 +129,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		// Retrieve the pod status
-		err = r.reconcilePodStatus(ctx, application, hr)
+		err = r.reconcilePodStatus(ctx, application)
 		if patchErr := r.patchStatus(ctx, application); patchErr != nil {
 			log.Error(patchErr, "Error updating application status")
 			return ctrl.Result{}, patchErr
@@ -160,7 +160,7 @@ func (r *ApplicationReconciler) patchStatus(ctx context.Context, application *v1
 	return r.Status().Patch(ctx, application, client.MergeFrom(latest))
 }
 
-func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, application *v1.Application) (*v2beta1.HelmRelease, error) {
+func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, application *v1.Application) error {
 	hr := v2beta1.HelmRelease{}
 	err := r.Get(ctx, types.NamespacedName{
 		Namespace: application.Namespace,
@@ -177,35 +177,34 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 			} else {
 				v1.AppErrorStatus(application, err.Error())
 			}
-			return &hr, nil
+			return nil
 		}
 		application.Status.Failures++
-		return nil, err
+		return err
 	}
 	application.Status.Failures = 0
 	if hr.Status.ObservedGeneration != hr.Generation {
 		v1.AppErrorStatus(application, "updated Helm Release status not available")
-		return nil, errors.New("HelmRelease status is not current")
+		return errors.New("HelmRelease status is not current")
 	}
 	for _, condition := range hr.GetConditions() {
 		apimeta.SetStatusCondition(&application.Status.Conditions, condition)
 	}
-	return &hr, nil
+	return nil
 }
 
-func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, application *v1.Application, helmRelease *v2beta1.HelmRelease) error {
+func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, application *v1.Application) error {
 	// Analyze the status of the pods under the HR, if any
 	log.Info("Reconciling pod status", "application", application.Name, "namespace", application.Namespace)
 	// XXX: This is for deployments. We need to make it clear that right now, this feature is "best effort".
 	var deploymentList appsv1.DeploymentList
-	if err := r.List(ctx, &deploymentList, &client.ListOptions{Namespace: helmRelease.GetReleaseNamespace()}); err != nil {
+	if err := r.List(ctx, &deploymentList, &client.ListOptions{Namespace: application.Namespace}); err != nil {
 		return err
 	}
 	// Try to retrieve the deployment
 	var releaseDeployment *appsv1.Deployment
 	for _, deployment := range deploymentList.Items {
-		// TODO: Should use helmRelease.GetReleaseName() and helmRelease.GetReleaseNamespace()
-		if deployment.GetAnnotations()[AnnotationHelmReleaseName] == helmRelease.Name && deployment.GetAnnotations()[AnnotationHelmReleaseNamespace] == helmRelease.Namespace {
+		if deployment.GetAnnotations()[AnnotationHelmReleaseName] == application.Name && deployment.GetAnnotations()[AnnotationHelmReleaseNamespace] == application.Namespace {
 			releaseDeployment = &deployment
 			break
 		}
@@ -384,7 +383,7 @@ func (r *ApplicationReconciler) CreateOrUpdateResources(ctx context.Context, app
 func (r *ApplicationReconciler) createOrUpdateHelmRelease(ctx context.Context, application *v1.Application) error {
 	newHR := &v2beta1.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        application.Name, // FIXME: this should use application.Spec.Template.Spec.ReleaseName
+			Name:        application.Name,
 			Namespace:   application.Namespace,
 			Labels:      application.Spec.Template.Labels,
 			Annotations: application.Spec.Template.Annotations,
