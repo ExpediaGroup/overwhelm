@@ -251,7 +251,7 @@ run-delve: generate fmt vet manifests
 
 .PHONY: kind-install-deps
 kind-install-deps:
-	curl -s https://fluxcd.io/install.sh | sudo bash
+	-curl -s https://fluxcd.io/install.sh | sudo bash
 
 .PHONY: kind-create-cluster
 kind-create-cluster:
