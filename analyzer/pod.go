@@ -15,20 +15,6 @@ type Result struct {
 }
 
 // Pod analyzes a pod object for potential errors and returns a Result
-//
-// Usage:
-//	c, err := k8s.CreateClient()
-//	if err != nil {
-//		panic(err)
-//	}
-//	pods, err := k8s.GetPods(c, "eg-api-gateway", "")
-//	if err != nil {
-//		panic(err)
-//	}
-//	for _, pod := range pods {
-//		result := analyzer.Pod(pod)
-//		log.Printf("%+v", result)
-//	}
 func Pod(pod v1.Pod) Result {
 	result := Result{
 		ResourceType: "Pod",
