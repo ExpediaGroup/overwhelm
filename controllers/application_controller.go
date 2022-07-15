@@ -56,8 +56,8 @@ const (
 	FinalizerName = "overwhelm.expediagroup.com/finalizer"
 	ManagedBy     = "app.kubernetes.io/managed-by"
 
-	AnnotationHelmReleaseName      = "meta.helm.sh/release-name"
-	AnnotationHelmReleaseNamespace = "meta.helm.sh/release-namespace"
+	LabelHelmReleaseName      = "helm.toolkit.fluxcd.io/name"
+	LabelHelmReleaseNamespace = "helm.toolkit.fluxcd.io/namespace"
 )
 
 var log logr.Logger
@@ -197,17 +197,23 @@ func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, applicat
 	// Analyze the status of the pods under the HR, if any
 	log.Info("Reconciling pod status", "application", application.Name, "namespace", application.Namespace)
 	// XXX: This is for deployments. We need to make it clear that right now, this feature is "best effort".
+	helmReleaseNameRequirement, err := labels.NewRequirement(LabelHelmReleaseName, selection.Equals, []string{application.Name})
+	if err != nil {
+		return fmt.Errorf("error creating requirement from %s: %v", helmReleaseNameRequirement.String(), err)
+	}
+	helmReleaseNamespaceRequirement, err := labels.NewRequirement(LabelHelmReleaseNamespace, selection.Equals, []string{application.Namespace})
+	if err != nil {
+		return fmt.Errorf("error creating requirement from %s: %v", helmReleaseNamespaceRequirement.String(), err)
+	}
 	var deploymentList appsv1.DeploymentList
-	if err := r.List(ctx, &deploymentList, &client.ListOptions{Namespace: application.Namespace}); err != nil {
+	if err := r.List(ctx, &deploymentList, &client.ListOptions{Namespace: application.Namespace, LabelSelector: labels.NewSelector().Add(*helmReleaseNameRequirement, *helmReleaseNamespaceRequirement), Limit: 1}); err != nil {
 		return err
 	}
 	// Try to retrieve the deployment
 	var releaseDeployment *appsv1.Deployment
 	for _, deployment := range deploymentList.Items {
-		if deployment.GetAnnotations()[AnnotationHelmReleaseName] == application.Name && deployment.GetAnnotations()[AnnotationHelmReleaseNamespace] == application.Namespace {
-			releaseDeployment = &deployment
-			break
-		}
+		releaseDeployment = &deployment
+		break
 	}
 	if releaseDeployment == nil {
 		// We didn't find a release deployment, so no pod status.
