@@ -11,4 +11,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/expediagroup/overwhelm
-  newTag: 040ea88ece1e5be39a30a0e7f709ebb32dfe08c6
+  newTag: ca5f8665f84592140deef86212ddd3f7e9ec4f73

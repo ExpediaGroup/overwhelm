@@ -30,6 +30,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -103,6 +104,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			application.Status.ObservedGeneration = application.Generation
 			application.Status.ValuesResourceVersion = ""
 			application.Status.HelmReleaseResourceVersion = ""
+			application.Status.Conditions = nil
 			v1.AppInProgressStatus(application)
 			if err = r.patchStatus(ctx, application); err != nil {
 				return ctrl.Result{RequeueAfter: r.RequeueInterval}, err
@@ -116,7 +118,6 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 			return ctrl.Result{}, err
 		}
-
 		// At this point the Helm Release can be reconciled
 		err := r.reconcileHelmReleaseStatus(ctx, application)
 		if patchErr := r.patchStatus(ctx, application); patchErr != nil {
@@ -126,7 +127,6 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-
 		// Retrieve the pod status
 		err = r.reconcilePodStatus(ctx, application)
 		if patchErr := r.patchStatus(ctx, application); patchErr != nil {
@@ -186,8 +186,9 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 		v1.AppErrorStatus(application, "updated Helm Release status not available")
 		return errors.New("HelmRelease status is not current")
 	}
-	// We completely overwrite the old conditions, because this is a new round, and we want new conditions
-	application.Status.Conditions = hr.Status.Conditions
+	for _, condition := range hr.GetConditions() {
+		apimeta.SetStatusCondition(&application.Status.Conditions, condition)
+	}
 	return nil
 }
 
