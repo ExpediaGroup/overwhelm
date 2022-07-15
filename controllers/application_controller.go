@@ -30,7 +30,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -187,9 +186,8 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 		v1.AppErrorStatus(application, "updated Helm Release status not available")
 		return errors.New("HelmRelease status is not current")
 	}
-	for _, condition := range hr.GetConditions() {
-		apimeta.SetStatusCondition(&application.Status.Conditions, condition)
-	}
+	// We completely overwrite the old conditions, because this is a new round, and we want new conditions
+	application.Status.Conditions = hr.Status.Conditions
 	return nil
 }
 
@@ -217,6 +215,10 @@ func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, applicat
 	}
 	if releaseDeployment == nil {
 		// We didn't find a release deployment, so no pod status.
+		return nil
+	}
+	if releaseDeployment.Status.ObservedGeneration != releaseDeployment.Generation {
+		log.Info("Deployment not updated because status.observedGeneration does not match the metadata.generation", "observedGeneration", releaseDeployment.Status.ObservedGeneration, "generation", releaseDeployment.Generation, "application", application.Name, "namespace", application.Namespace)
 		return nil
 	}
 	log.Info("Found deployment", "deploymentName", releaseDeployment.Name, "application", application.Name, "namespace", application.Namespace)

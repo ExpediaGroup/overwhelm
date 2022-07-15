@@ -147,7 +147,6 @@ func AppAnalysisCondition(application *Application, result analyzer.Result) {
 	if result.Healthy {
 		condition.Status = metav1.ConditionTrue
 		condition.Message = "At least one new pod has progressed successfully"
-
 	} else {
 		condition.Status = metav1.ConditionFalse
 		condition.Message = fmt.Sprintf("%s %s is unhealthy: %v", result.ResourceType, result.ResourceName, result.Errors)

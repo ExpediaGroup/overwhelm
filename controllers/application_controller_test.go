@@ -291,6 +291,8 @@ var _ = Describe("Application controller", func() {
 				deployment.Labels[LabelHelmReleaseName] = a.Name
 				deployment.Labels[LabelHelmReleaseNamespace] = a.Namespace
 				Expect(k8sClient.Create(ctx, deployment)).Should(Succeed())
+				deployment.Status.ObservedGeneration = 1
+				deployment.Generation = deployment.Status.ObservedGeneration
 				deployment.Status.Conditions = []appsv1.DeploymentCondition{
 					{
 						Status:             v1.ConditionTrue,
