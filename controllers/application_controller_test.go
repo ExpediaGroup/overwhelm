@@ -65,10 +65,10 @@ var deployment = &appsv1.Deployment{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "default",
 		Name:      "appname",
-		Labels:    map[string]string{"app": "appname"},
-		Annotations: map[string]string{
-			AnnotationHelmReleaseName:      application.Spec.Template.Spec.ReleaseName,
-			AnnotationHelmReleaseNamespace: application.Namespace,
+		Labels: map[string]string{
+			"app":                     "appname",
+			LabelHelmReleaseName:      application.Name,
+			LabelHelmReleaseNamespace: application.Namespace,
 		},
 	},
 	Spec: appsv1.DeploymentSpec{
@@ -288,8 +288,8 @@ var _ = Describe("Application controller", func() {
 							return nil
 						}
 					}(ctx, app), 5*time.Second, 300*time.Millisecond).Should(BeNil())
-				deployment.Annotations[AnnotationHelmReleaseName] = a.Name
-				deployment.Annotations[AnnotationHelmReleaseNamespace] = a.Namespace
+				deployment.Labels[LabelHelmReleaseName] = a.Name
+				deployment.Labels[LabelHelmReleaseNamespace] = a.Namespace
 				Expect(k8sClient.Create(ctx, deployment)).Should(Succeed())
 				deployment.Status.Conditions = []appsv1.DeploymentCondition{
 					{
