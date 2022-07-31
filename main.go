@@ -87,6 +87,7 @@ func main() {
 		Scheme:          mgr.GetScheme(),
 		RequeueInterval: requeueInterval,
 		Retries:         int64(retries),
+		Events:          mgr.GetEventRecorderFor("overwhelm"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)

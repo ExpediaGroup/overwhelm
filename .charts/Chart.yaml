@@ -1,0 +1,6 @@
+apiVersion: v2
+name: overwhelm
+version: 0.0.1
+maintainers:
+    - name: "Expedia Group"
+      url: "https://github.com/ExpediaGroup/overwhelm"

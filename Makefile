@@ -7,6 +7,8 @@ PROJECT := overwhelm
 REGISTRY := ghcr.io/expediagroup
 VERSION := $(shell git rev-parse HEAD|| echo "v0.0.1") #may need to change this to tags if we are using tags
 IMG = $(REGISTRY)/$(PROJECT):$(VERSION)
+VALUES_BASED_PROJECT = "{{ .Values.deployment.image }}"
+VALUES_BASED_IMG = $(VALUES_BASED_PROJECT):$(VERSION)
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -140,6 +142,13 @@ endif
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
+.PHONY: helmManifests
+helmManifests: manifests kustomize kubernetes-split-yaml ## Create Helm Templates to deploy manifests using Helm
+	$(KUSTOMIZE) build config/helm-manifest >> .charts/tmp.yaml
+	go run update-charts.go
+	$(KUBERNETES_SPLIT_YAML) --outdir .charts/templates .charts/tmp.yaml
+	rm .charts/tmp.yaml
+
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
@@ -149,6 +158,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
+
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
@@ -169,6 +179,16 @@ ENVTEST = $(shell pwd)/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
+KUBERNETES_SPLIT_YAML = $(shell pwd)/bin/kubernetes-split-yaml
+.PHONY: kubernetes-split-yaml
+kubernetes-split-yaml: ## Download kustomize locally if necessary.
+	$(call go-get-tool,$(KUBERNETES_SPLIT_YAML),github.com/mogensen/kubernetes-split-yaml@latest)
+
+.PHONY: split-yaml
+split-yaml: kubernetes-split-yaml
+	$(KUBERNETES_SPLIT_YAML) --outdir .charts ./.charts/templates/x.yaml
+	rm ./.charts/templates/x.yaml
+
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -178,7 +198,7 @@ TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+GOBIN=$(PROJECT_DIR)/bin go get -d $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
@@ -257,14 +277,15 @@ kind-install-deps:
 kind-create-cluster:
 	kind create cluster --name overwhelm
 	flux install
-	kubectl create clusterrolebinding --serviceaccount=overwhelm-system:overwhelm-controller-manager --clusterrole=cluster-admin overwhelm-controller-manager
+	#kubectl create clusterrolebinding --serviceaccount=overwhelm-system:overwhelm-controller-manager --clusterrole=cluster-admin overwhelm-controller-manager
 
 .PHONY: kind-deploy
-kind-deploy: manifests kustomize deploy docker-build
+kind-deploy: manifests kustomize docker-build
 	kind load docker-image ${IMG} --name overwhelm
 
 .PHONY: kind-debug
-kind-debug: manifests kustomize deploy
+kind-debug: helmManifests
+	helm upgrade -i overwhelm ./.charts
 	# After this, you can run overwhelm locally. Ignore the ImagePullBackOff from the overwhelm-controller-manager pod,
 	# just start overwhelm locally (i.e. via your IDE).
 

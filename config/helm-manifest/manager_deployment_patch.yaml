@@ -1,0 +1,17 @@
+# Use <GOTEMPLATE></GOTEMPLATE> tags for Go template delimiters to be inserted by the update-charts.go script
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: overwhelm-controller-manager
+  namespace: overwhelm-system
+spec:
+  replicas: <GOTEMPLATE> .Values.overwhelm.deployment.replicas </GOTEMPLATE>
+  template:
+    metadata:
+      $patch: replace
+      annotations: <GOTEMPLATE> toYaml .Values.overwhelm.deployment.annotations  | indent 8 </GOTEMPLATE>
+      labels: <GOTEMPLATE> toYaml .Values.overwhelm.deployment.labels  | indent 8 </GOTEMPLATE>
+    spec:
+      containers:
+      - name: manager
+        image: <GOTEMPLATE> .Values.overwhelm.deployment.image.name </GOTEMPLATE>:<GOTEMPLATE> .Values.overwhelm.deployment.image.tag </GOTEMPLATE>

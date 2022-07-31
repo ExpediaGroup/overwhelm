@@ -1,0 +1,33 @@
+---
+overwhelm:
+  deployment:
+    annotations:
+      ad.datadoghq.com/manager.check_names: '["openmetrics"]'
+      ad.datadoghq.com/manager.init_configs: '[{}]'
+      ad.datadoghq.com/manager.instances: |-
+        [
+          {
+            "prometheus_url": "http://%%host%%:8080/metrics",
+            "namespace": "flux-system",
+            "metrics": [ "*" ],
+            "send_distribution_buckets": "false",
+            "send_histograms_buckets": "false",
+            "send_monotonic_counter": "true"
+          }
+        ]
+      prometheus.io/port: '8080'
+      prometheus.io/scrape: 'true'
+    image:
+      name: ghcr.io/expediagroup/overwhelm
+      tag: e0911f07c4ab774bc5c960a92f6a298959a645ed
+    labels:
+      control-plane: controller-manager
+    replicas: 2
+    resources:
+      limits:
+        cpu: 1024m
+        memory: 1Gi
+      requests:
+        cpu: 128m
+        memory: 64Mi
+
