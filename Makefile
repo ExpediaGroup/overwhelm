@@ -146,7 +146,7 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 helmManifests: manifests kustomize kubernetes-split-yaml ## Create Helm Templates to deploy manifests using Helm
 	$(KUSTOMIZE) build config/helm-manifest >> .charts/tmp.yaml
 	go run update-charts.go
-	$(KUBERNETES_SPLIT_YAML) --outdir .charts/templates .charts/tmp.yaml
+	$(KUBERNETES_SPLIT_YAML) --outdir .charts/overwhelm/templates .charts/tmp.yaml
 	rm .charts/tmp.yaml
 
 .PHONY: uninstall
