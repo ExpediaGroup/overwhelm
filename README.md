@@ -24,7 +24,13 @@ operator-sdk create api --group core --version v1alpha1 --kind Application --res
 - Deploy overwhelm by executing `make kind-deploy`
 - (optional) Install a dummy Application by executing `make kind-install-dummy-app`
 
+
 To clean the Kind cluster, execute `make kind-clean`.
+
+## Helm Charts
+- The .charts folder contains the `overwhelm` helm chart.
+- `make helmManifests` will update the chart templates if any changes are made to the helm resources. 
+- To debug using helm install of the resources execute `make kind-helm-debug` once you create a Kind cluster.
 
 
 ## Prerequisite

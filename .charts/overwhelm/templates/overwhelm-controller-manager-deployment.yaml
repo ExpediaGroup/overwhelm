@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: overwhelm-controller-manager
+  namespace: overwhelm-system
+spec:
+  replicas: {{ .Values.overwhelm.deployment.replicas }}
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations: 
+{{ toYaml .Values.overwhelm.deployment.annotations  | indent 8 }}
+      labels: 
+{{ toYaml .Values.overwhelm.deployment.labels  | indent 8 }}
+    spec:
+      containers:
+      - args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
+        command:
+        - /manager
+        image: {{ .Values.overwhelm.deployment.image.manager.name }}:{{ .Values.overwhelm.deployment.image.manager.tag }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources: 
+{{ toYaml .Values.overwhelm.deployment.resources  | indent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=0
+        image: {{ .Values.overwhelm.deployment.image.kubeRbacProxy.name }}:{{ .Values.overwhelm.deployment.image.kubeRbacProxy.tag }}
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 5m
+            memory: 64Mi
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: overwhelm-controller-manager
+      terminationGracePeriodSeconds: 10

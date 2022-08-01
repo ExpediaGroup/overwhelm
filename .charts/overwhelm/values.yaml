@@ -1,0 +1,21 @@
+---
+overwhelm:
+  deployment:
+    image:
+      manager:
+        name: ghcr.io/expediagroup/overwhelm
+        tag: latest
+      kubeRbacProxy:
+        name: gcr.io/kubebuilder/kube-rbac-proxy
+        tag: v0.8.0
+    labels:
+      control-plane: controller-manager
+    replicas: 2
+    resources:
+      limits:
+        cpu: 1024m
+        memory: 1Gi
+      requests:
+        cpu: 128m
+        memory: 64Mi
+
