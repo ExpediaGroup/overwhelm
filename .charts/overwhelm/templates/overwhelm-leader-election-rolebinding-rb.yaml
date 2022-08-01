@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: overwhelm-leader-election-rolebinding
+  namespace: overwhelm-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: overwhelm-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: overwhelm-controller-manager
+  namespace: overwhelm-system

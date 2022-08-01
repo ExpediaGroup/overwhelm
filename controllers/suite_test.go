@@ -84,6 +84,7 @@ var _ = BeforeSuite(func() {
 		Scheme:          k8sManager.GetScheme(),
 		RequeueInterval: 3 * time.Second,
 		Retries:         int64(3),
+		Events:          k8sManager.GetEventRecorderFor("overwhelm"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 	go func() {
