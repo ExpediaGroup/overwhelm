@@ -24,7 +24,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: {{ .Values.overwhelm.deployment.image.manager.name }}:{{ .Values.overwhelm.deployment.image.manager.tag }}
+        image: {{ .Values.overwhelm.deployment.image.manager.repository }}:{{ .Values.overwhelm.deployment.image.manager.tag }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -47,7 +47,7 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
-        image: {{ .Values.overwhelm.deployment.image.kubeRbacProxy.name }}:{{ .Values.overwhelm.deployment.image.kubeRbacProxy.tag }}
+        image: {{ .Values.overwhelm.deployment.image.kubeRbacProxy.repository }}:{{ .Values.overwhelm.deployment.image.kubeRbacProxy.tag }}
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
