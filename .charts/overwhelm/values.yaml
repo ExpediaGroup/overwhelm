@@ -3,10 +3,10 @@ overwhelm:
   deployment:
     image:
       manager:
-        name: ghcr.io/expediagroup/overwhelm
+        repository: ghcr.io/expediagroup/overwhelm
         tag: latest
       kubeRbacProxy:
-        name: gcr.io/kubebuilder/kube-rbac-proxy
+        repository: gcr.io/kubebuilder/kube-rbac-proxy
         tag: v0.8.0
     labels:
       control-plane: controller-manager
