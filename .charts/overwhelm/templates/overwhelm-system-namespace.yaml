@@ -6,4 +6,4 @@
     labels:
       control-plane: controller-manager
     name: overwhelm-system
-{{- end}}
+{{- end }}
