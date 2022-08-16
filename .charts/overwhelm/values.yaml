@@ -18,6 +18,4 @@ overwhelm:
       requests:
         cpu: 128m
         memory: 64Mi
-  namespace:
-    create: true
 
