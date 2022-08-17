@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: manager
-        image: <GOTEMPLATE> .Values.overwhelm.deployment.image.manager.name </GOTEMPLATE>:<GOTEMPLATE> .Values.overwhelm.deployment.image.manager.tag </GOTEMPLATE>
+        image: <GOTEMPLATE> .Values.overwhelm.deployment.image.manager.repository </GOTEMPLATE>:<GOTEMPLATE> .Values.overwhelm.deployment.image.manager.tag </GOTEMPLATE>
       - name: kube-rbac-proxy
-        image: <GOTEMPLATE> .Values.overwhelm.deployment.image.kubeRbacProxy.name </GOTEMPLATE>:<GOTEMPLATE> .Values.overwhelm.deployment.image.kubeRbacProxy.tag </GOTEMPLATE>
+        image: <GOTEMPLATE> .Values.overwhelm.deployment.image.kubeRbacProxy.repository </GOTEMPLATE>:<GOTEMPLATE> .Values.overwhelm.deployment.image.kubeRbacProxy.tag </GOTEMPLATE>
