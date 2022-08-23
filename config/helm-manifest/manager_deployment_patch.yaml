@@ -5,15 +5,15 @@ metadata:
   name: overwhelm-controller-manager
   namespace: overwhelm-system
 spec:
-  replicas: <GOTEMPLATE> .Values.overwhelm.deployment.replicas </GOTEMPLATE>
+  replicas: <GOTEMPLATE> .Values.deployment.replicas </GOTEMPLATE>
   template:
     metadata:
       $patch: replace
-      annotations: <GOTEMPLATE> toYaml .Values.overwhelm.deployment.annotations  | indent 8 </GOTEMPLATE>
-      labels: <GOTEMPLATE> toYaml .Values.overwhelm.deployment.labels  | indent 8 </GOTEMPLATE>
+      annotations: <GOTEMPLATE> toYaml .Values.deployment.annotations  | indent 8 </GOTEMPLATE>
+      labels: <GOTEMPLATE> toYaml .Values.deployment.labels  | indent 8 </GOTEMPLATE>
     spec:
       containers:
       - name: manager
-        image: <GOTEMPLATE> .Values.overwhelm.deployment.image.manager.repository </GOTEMPLATE>:<GOTEMPLATE> .Values.overwhelm.deployment.image.manager.tag </GOTEMPLATE>
+        image: <GOTEMPLATE> .Values.deployment.image.manager.repository </GOTEMPLATE>:<GOTEMPLATE> .Values.deployment.image.manager.tag </GOTEMPLATE>
       - name: kube-rbac-proxy
-        image: <GOTEMPLATE> .Values.overwhelm.deployment.image.kubeRbacProxy.repository </GOTEMPLATE>:<GOTEMPLATE> .Values.overwhelm.deployment.image.kubeRbacProxy.tag </GOTEMPLATE>
+        image: <GOTEMPLATE> .Values.deployment.image.kubeRbacProxy.repository </GOTEMPLATE>:<GOTEMPLATE> .Values.deployment.image.kubeRbacProxy.tag </GOTEMPLATE>
