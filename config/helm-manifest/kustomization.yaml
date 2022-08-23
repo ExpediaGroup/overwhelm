@@ -3,6 +3,12 @@ bases:
 
 patchesStrategicMerge:
   - manager_deployment_patch.yaml
+  - |-
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: overwhelm-system
+      $patch: delete
 
 patchesJson6902: # We use Json6902 patches for inline replacement patches which are not possible with Strategic Merge patches
   - target:
@@ -13,4 +19,4 @@ patchesJson6902: # We use Json6902 patches for inline replacement patches which 
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/resources
-        value: <GOTEMPLATE> toYaml .Values.overwhelm.deployment.resources  | indent 10 </GOTEMPLATE>
+        value: <GOTEMPLATE> toYaml .Values.deployment.resources  | indent 10 </GOTEMPLATE>

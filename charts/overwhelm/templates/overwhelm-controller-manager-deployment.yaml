@@ -6,16 +6,16 @@ metadata:
   name: overwhelm-controller-manager
   namespace: overwhelm-system
 spec:
-  replicas: {{ .Values.overwhelm.deployment.replicas }}
+  replicas: {{ .Values.deployment.replicas }}
   selector:
     matchLabels:
       control-plane: controller-manager
   template:
     metadata:
       annotations: 
-{{ toYaml .Values.overwhelm.deployment.annotations  | indent 8 }}
+{{ toYaml .Values.deployment.annotations  | indent 8 }}
       labels: 
-{{ toYaml .Values.overwhelm.deployment.labels  | indent 8 }}
+{{ toYaml .Values.deployment.labels  | indent 8 }}
     spec:
       containers:
       - args:
@@ -24,7 +24,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: {{ .Values.overwhelm.deployment.image.manager.repository }}:{{ .Values.overwhelm.deployment.image.manager.tag }}
+        image: {{ .Values.deployment.image.manager.repository }}:{{ .Values.deployment.image.manager.tag }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -39,7 +39,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
         resources: 
-{{ toYaml .Values.overwhelm.deployment.resources  | indent 10 }}
+{{ toYaml .Values.deployment.resources  | indent 10 }}
         securityContext:
           allowPrivilegeEscalation: false
       - args:
@@ -47,7 +47,7 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
-        image: {{ .Values.overwhelm.deployment.image.kubeRbacProxy.repository }}:{{ .Values.overwhelm.deployment.image.kubeRbacProxy.tag }}
+        image: {{ .Values.deployment.image.kubeRbacProxy.repository }}:{{ .Values.deployment.image.kubeRbacProxy.tag }}
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
