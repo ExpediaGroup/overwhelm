@@ -3,28 +3,13 @@
 # uses the variable {{ .cluster.account }}, which overwhelm would automatically render as "1234"
 apiVersion: v1
 data:
-  account: "344791879147"
-  accountAlias: runtime-test
-  amiId: ami-092cc88f5f93a14d3
-  appSubnets: subnet-0bf101d6677d81671,subnet-01ebbdca1ee14a256,subnet-0de4ea3c820cba8d1
-  cloudProvider: aws
-  cluster: rcp-dev
-  clusterEndpoint: https://80D8648B535EC8AE668E138667B2DDE3.gr7.us-west-2.eks.amazonaws.com
-  clusterFullName: runtime-test-rcp-dev-us-west-2
-  dnsSuffix: rcp-dev.us-west-2.runtime.test.exp-aws.net
-  environmentCategory: test
-  environmentScope: commerce
-  environmentTier: test
-  fc_account_env: lab
-  ingressSubnets: subnet-090a132bd86862a01,subnet-05aa0b2646a2a4a2c,subnet-0791a6e8121b72774
-  island: runtime
-  oidc_issuer_url: oidc.eks.us-west-2.amazonaws.com/id/80D8648B535EC8AE668E138667B2DDE3
-  oidc_provider_arn: arn:aws:iam::344791879147:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/80D8648B535EC8AE668E138667B2DDE3
-  pciCategory: oos
+  cluster: some-cluster
   region: us-west-2
+  account: "1234"
+  segment: some-segment
 kind: ConfigMap
 metadata:
   name: cluster-properties
   namespace: kube-public
   labels:
-    "overwhelm.expediagroup.com/render-values-source": "cluster"
+    "k8s.overwhelm.com/render-values-source": "cluster"

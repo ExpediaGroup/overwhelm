@@ -3,21 +3,10 @@
 # uses the variable {{ .egdata.environment }}, which overwhelm would automatically render as "test"
 apiVersion: v1
 data:
-  artifactory_host: artylab.expedia.biz
-  efs_filesystem_id: fs-05b82f747004ac501
-  kubefed_account: "344791879147"
-  splunk_deployment_endpoint: splunk-deployment-default.egmonitoring.test.exp-aws.net.
-  splunk_hec_endpoint: splunk-hec-default.egmonitoring.test.exp-aws.net.
-  splunk_indexers_endpoint: splunk-indexers-default.egmonitoring.test.exp-aws.net.
-  splunk_search_endpoint: splunk-search-api.egmonitoring.test.exp-aws.net.
-  splunk_token: bfd66e0c-01e0-44b3-ba36-335a52d007c9
-  vault_address: https://vault-enterprise.secrets.runtime.test-cts.exp-aws.net
-  vault_cluster_name: vault-enterprise
-  vault_island_namespace: runtime
-  vault_namespace: lab/islands
+  environment: test
 kind: ConfigMap
 metadata:
   name: egdata-properties
   namespace: kube-public
   labels:
-    "overwhelm.expediagroup.com/render-values-source": "egdata"
+    "k8s.overwhelm.com/render-values-source": "egdata"
