@@ -74,13 +74,13 @@ type ApplicationStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// HelmReleaseResourceVersion is the helm release resource version
+	// HelmReleaseGeneration is the helm release generation
 	// +optional
-	HelmReleaseResourceVersion string `json:"helmReleaseResourceVersion,omitempty"`
+	HelmReleaseGeneration int64 `json:"helmReleaseGeneration,omitempty"`
 
-	// ValuesResourceVersion is the resource version of the resource that contains the helm values
+	// ValuesCheckSum is the checksum of the values for helm
 	// +optional
-	ValuesResourceVersion string `json:"valuesResourceVersion,omitempty"`
+	ValuesCheckSum string `json:"valuesCheckSum,omitempty"`
 
 	// Failures is the reconciliation failure count against the latest desired
 	// state. It is reset after a successful reconciliation.
@@ -139,15 +139,16 @@ func AppErrorStatus(application *Application, error string) {
 	apimeta.SetStatusCondition(&application.Status.Conditions, condition)
 }
 
-func AppAnalysisCondition(application *Application, result analyzer.Result) {
+func AppPodAnalysisCondition(application *Application, result analyzer.Result) {
 	condition := metav1.Condition{
-		Type:   "Analysis", // Could be meta.ReadyCondition, but it would clash with the HR
-		Reason: "Healthy",
+		Type:   "PodReady", // Could be meta.ReadyCondition, but it would clash with the HR
+		Reason: "ContainersReady",
 	}
 	if result.Healthy {
 		condition.Status = metav1.ConditionTrue
 		condition.Message = "At least one new pod has progressed successfully"
 	} else {
+		condition.Reason = "ContainersNotReady"
 		condition.Status = metav1.ConditionFalse
 		condition.Message = fmt.Sprintf("%s %s is unhealthy: %v", result.ResourceType, result.ResourceName, result.Errors)
 	}

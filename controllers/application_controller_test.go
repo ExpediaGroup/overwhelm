@@ -99,6 +99,12 @@ var replicaSet = &appsv1.ReplicaSet{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "default",
 		Name:      "appname-55f99cdb4b",
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+			Name:       "appname",
+			UID:        "3192f76b-ba27-400d-a490-ee8c1871aa83",
+		}},
 	},
 	Spec: appsv1.ReplicaSetSpec{
 		Selector: &metav1.LabelSelector{
@@ -132,6 +138,12 @@ var pod = &v1.Pod{
 			"app":               "appname",
 			"pod-template-hash": "55f99cdb4b",
 		},
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: "apps/v1",
+			Kind:       "ReplicaSet",
+			Name:       "appname-55f99cdb4b",
+			UID:        "3192f76b-ba27-400d-a490-ee8c1871aa83",
+		}},
 	},
 	Spec: v1.PodSpec{
 		Containers: []v1.Container{

@@ -6,29 +6,104 @@ metadata:
   name: application-sample
   namespace: app-namespace
   labels:
-    test: 'yes'
+    test: 'hello'
 spec:
+  data:
+    "immutable.yaml": |
+      global:
+        application: application-sample
+        instance: sample
+        release: pot
+    "global.yaml": |
+      global:
+        account: '{{ .cluster.account }}'
+        appSubnets: '{{ .cluster.appSubnets }}'
+        artifactoryHost: '{{ .egdata.artifactory_host }}'
+        cloudProvider: '{{ .cluster.cloudProvider }}'
+        clusterShortName: '{{ .cluster.cluster }}'
+        dnsSuffix: '{{ .cluster.dnsSuffix }}'
+        environmentScope: '{{ .cluster.environmentScope }}'
+        environmentTier: '{{ .cluster.environmentTier }}'
+        ingressSubnets: '{{ .cluster.ingressSubnets }}'
+        island: '{{ .cluster.island }}'
+        oidcUrl: '{{ .cluster.oidc_issuer_url }}'
+        pciCategory: '{{ .cluster.pciCategory }}'
+        region: '{{ .cluster.region }}'
+        vault:
+          islandNamespace: '{{ .egdata.vault_island_namespace }}'
+          namespace: '{{ .egdata.vault_namespace }}'
+    "values1.yaml": |
+      paved-road-istio:
+        ingress:
+          enabled: false
+        certManager:
+          enabled: true
+      deployment:
+        autoscale:
+          metricName: cpu
+          metricType: Resource
+          targetAlgorithm: averageUtilization
+          targetThreshold: 80
+          targetType: Utilization
+        replicas:
+          max: 3
+          min: 1
+        resources:
+          limits:
+            cpu: "0.4"
+            memory: 1024Mi
+          requests:
+            cpu: "0.4"
+            memory: 1024Mi
+      global:
+        portMappings:
+        - name: http
+          pathPrefixes:
+          - /
+          port: 8080
+        version: 1a2268af50cbd3ef56fe585f1b3d933a9dc15994
+      management:
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 8080
+          initialDelaySeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: 8080
+          initialDelaySeconds: 30
   template:
-    metadata:
-      annotations:
-        ann: 'yes'
-      labels:
-        test: 'no'
     spec:
-      interval: 4m
       chart:
         spec:
-          chart: some-chart-name
-          version: '0.0.1'
+          chart: paved-road-service
+          reconcileStrategy: ChartVersion
           sourceRef:
-            name: public-helm-virtual
             kind: HelmRepository
-  data:
-    values.yaml: |-
-      deployment : hello-world
-#      account : {{ .cluster.account }}
-#      region : {{ .cluster.region }}
-#      environment : {{ .egdata.environment }}
+            name: public-helm-virtual
+            namespace: runtime
+          version: 6.1.0
+      interval: 2m0s
+      releaseName: app-san
+      test:
+        enable: true
+      timeout: 30m0s
+      upgrade:
+        remediation:
+          retries: 3
+      values:
+        releaseId: "301444492831285133"
+      valuesFrom:
+        - kind: ConfigMap
+          name: application-sample
+          valuesKey: values1.yaml
+        - kind: ConfigMap
+          name: application-sample
+          valuesKey: global.yaml
+        - kind: ConfigMap
+          name: application-sample
+          valuesKey: immutable.yaml
 
 
 

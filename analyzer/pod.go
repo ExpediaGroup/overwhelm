@@ -15,7 +15,7 @@ type Result struct {
 }
 
 // Pod analyzes a pod object for potential errors and returns a Result
-func Pod(pod v1.Pod) Result {
+func Pod(pod *v1.Pod) Result {
 	result := Result{
 		ResourceType: "Pod",
 		ResourceName: pod.Name,
