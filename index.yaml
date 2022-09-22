@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   overwhelm:
   - apiVersion: v2
+    created: "2022-09-22T15:16:31.965557477Z"
+    digest: ddd068e004b3abab513b5bc796b05553dd8201d032f9a81b17702ace78cd2cf2
+    maintainers:
+    - name: Expedia Group
+      url: https://github.com/ExpediaGroup/overwhelm
+    name: overwhelm
+    urls:
+    - https://github.com/ExpediaGroup/overwhelm/releases/download/overwhelm-1.1.0/overwhelm-1.1.0.tgz
+    version: 1.1.0
+  - apiVersion: v2
     created: "2022-09-02T14:38:17.030269316Z"
     digest: 68f2a858127e4daac133f0a109243e211d1a02b0ed9909f42c51f381d844ea42
     maintainers:
