@@ -589,15 +589,16 @@ spec:
                 description: Failures is the reconciliation failure count against the latest desired state. It is reset after a successful reconciliation.
                 format: int64
                 type: integer
-              helmReleaseResourceVersion:
-                description: HelmReleaseResourceVersion is the helm release resource version
-                type: string
+              helmReleaseGeneration:
+                description: HelmReleaseGeneration is the helm release generation
+                format: int64
+                type: integer
               observedGeneration:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
                 type: integer
-              valuesResourceVersion:
-                description: ValuesResourceVersion is the resource version of the resource that contains the helm values
+              valuesCheckSum:
+                description: ValuesCheckSum is the checksum of the values for helm
                 type: string
             type: object
         type: object

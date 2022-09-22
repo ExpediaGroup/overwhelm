@@ -17,6 +17,7 @@ package controllers
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"regexp"
@@ -27,20 +28,21 @@ import (
 	"github.com/ExpediaGroup/overwhelm/analyzer"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/go-logr/logr"
+	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
 )
@@ -56,6 +58,7 @@ type ApplicationReconciler struct {
 
 const (
 	FinalizerName             = "overwhelm.expediagroup.com/finalizer"
+	ValuesChecksumName        = "overwhelm.expediagroup.com/values-checksum"
 	ManagedBy                 = "app.kubernetes.io/managed-by"
 	LabelHelmReleaseName      = "helm.toolkit.fluxcd.io/name"
 	LabelHelmReleaseNamespace = "helm.toolkit.fluxcd.io/namespace"
@@ -71,6 +74,10 @@ var log logr.Logger
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=helm.toolkit.fluxcd.io,resources=helmreleases,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=helm.toolkit.fluxcd.io,resources=helmreleases/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+//+kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;watch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get
+//+kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -84,14 +91,29 @@ var log logr.Logger
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log = ctrllog.FromContext(ctx)
 	application := &v1.Application{}
+	pod := &corev1.Pod{}
 	var err error
-	log.Info("Starting to read application")
 	if err = r.Get(ctx, req.NamespacedName, application); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Error reading application object")
 			return ctrl.Result{}, err
 		}
+		// if application is not found the request could be from a pod which has a different name
+		if err = r.getApplicationFromPod(req, pod, application); err != nil {
+			return ctrl.Result{}, nil
+		}
+
+		err = r.reconcilePodStatus(application, pod)
+		if patchErr := r.patchStatus(ctx, application); patchErr != nil {
+			log.Error(patchErr, "Error updating application status")
+			return ctrl.Result{}, patchErr
+		}
+		if err != nil {
+			log.Error(err, "Error reconciling pod status")
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
+
 	}
 	if application.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(application, FinalizerName) {
@@ -105,8 +127,8 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		// New Application and Application update are identified by gen and observed gen mismatch
 		if application.Status.ObservedGeneration != application.Generation {
 			application.Status.ObservedGeneration = application.Generation
-			application.Status.ValuesResourceVersion = ""
-			application.Status.HelmReleaseResourceVersion = ""
+			application.Status.HelmReleaseGeneration = 0
+			application.Status.ValuesCheckSum = ""
 			application.Status.Conditions = nil
 			v1.AppInProgressStatus(application)
 			r.Events.Eventf(application, corev1.EventTypeNormal, InfoReason, "Creating ConfigMap and HelmRelease Objects")
@@ -121,6 +143,10 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				return ctrl.Result{RequeueAfter: r.RequeueInterval}, patchErr
 			}
 			return ctrl.Result{}, err
+		} else { // need to update the hr and cm generation in the application status if create or update succeeds
+			if patchErr := r.patchStatus(ctx, application); patchErr != nil {
+				return ctrl.Result{RequeueAfter: r.RequeueInterval}, patchErr
+			}
 		}
 		// At this point the Helm Release can be reconciled
 		err := r.reconcileHelmReleaseStatus(ctx, application)
@@ -131,19 +157,20 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		// Retrieve the pod status
-		err = r.reconcilePodStatus(ctx, application)
-		if patchErr := r.patchStatus(ctx, application); patchErr != nil {
-			log.Error(patchErr, "Error updating application status")
-			return ctrl.Result{}, patchErr
-		}
-		if err != nil {
-			log.Error(err, "Error reconciling pod status")
-			return ctrl.Result{}, err
-		}
 	} else {
 		if controllerutil.ContainsFinalizer(application, FinalizerName) {
-			// Pre Delete actions go here.
+			helmRelease := &v2beta1.HelmRelease{}
+			if err = r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: req.Name}, helmRelease); err != nil {
+				if !apierrors.IsNotFound(err) {
+					err = fmt.Errorf("failed to get HelmRelease '%s': %w", req.Name, err)
+					return ctrl.Result{}, err
+				}
+			} else {
+				if err = r.Client.Delete(ctx, helmRelease); err != nil {
+					err = fmt.Errorf("failed to delete HelmRelease '%s': %w", req.Name, err)
+					return ctrl.Result{}, err
+				}
+			}
 			patch := client.MergeFrom(application.DeepCopy())
 			controllerutil.RemoveFinalizer(application, FinalizerName)
 			if err = r.Patch(ctx, application, patch); err != nil {
@@ -169,7 +196,7 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 		Namespace: application.Namespace,
 		Name:      application.Name,
 	}, &hr)
-	if err == nil && hr.ResourceVersion != application.Status.HelmReleaseResourceVersion {
+	if err == nil && hr.Generation != application.Status.HelmReleaseGeneration {
 		err = errors.New("HelmRelease not updated")
 	}
 
@@ -196,79 +223,10 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 	return nil
 }
 
-func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, application *v1.Application) error {
-	// Analyze the status of the pods under the HR, if any
-	log.Info("Reconciling pod status", "application", application.Name, "namespace", application.Namespace)
-	// XXX: This is for deployments. We need to make it clear that right now, this feature is "best effort".
-	helmReleaseNameRequirement, err := labels.NewRequirement(LabelHelmReleaseName, selection.Equals, []string{application.Name})
-	if err != nil {
-		return fmt.Errorf("error creating requirement from %s: %v", helmReleaseNameRequirement.String(), err)
-	}
-	helmReleaseNamespaceRequirement, err := labels.NewRequirement(LabelHelmReleaseNamespace, selection.Equals, []string{application.Namespace})
-	if err != nil {
-		return fmt.Errorf("error creating requirement from %s: %v", helmReleaseNamespaceRequirement.String(), err)
-	}
-	var deploymentList appsv1.DeploymentList
-	if err = r.List(ctx, &deploymentList, &client.ListOptions{Namespace: application.Namespace, LabelSelector: labels.NewSelector().Add(*helmReleaseNameRequirement, *helmReleaseNamespaceRequirement), Limit: 1}); err != nil {
-		return err
-	}
-	// Try to retrieve the deployment
-	var releaseDeployment *appsv1.Deployment
-	for _, deployment := range deploymentList.Items {
-		releaseDeployment = &deployment
-		break
-	}
-	if releaseDeployment == nil {
-		// We didn't find a release deployment, so no pod status.
-		return nil
-	}
-	if releaseDeployment.Status.ObservedGeneration != releaseDeployment.Generation {
-		log.Info("Deployment not updated because status.observedGeneration does not match the metadata.generation", "observedGeneration", releaseDeployment.Status.ObservedGeneration, "generation", releaseDeployment.Generation, "application", application.Name, "namespace", application.Namespace)
-		return nil
-	}
-	log.Info("Found deployment", "deploymentName", releaseDeployment.Name, "application", application.Name, "namespace", application.Namespace)
-	r.Events.Eventf(application, corev1.EventTypeNormal, InfoReason, "Deployment created. Fetching Pod Status")
-	// Get ReplicaSet name
-	replicaSetName := extractReplicaSetNameFromDeployment(releaseDeployment)
-	if replicaSetName == "" {
-		return errors.New("failed to extract ReplicaSet from Deployment")
-	}
-	log.Info("Extracted ReplicaSet name", "replicaSetName", replicaSetName, "application", application.Name, "namespace", application.Namespace)
-	// Make sure that the ReplicaSet name has the right format. This is optional, mostly for testing purposes.
-	replicaSetNameParts := strings.Split(replicaSetName, "-")
-	if len(replicaSetNameParts) != 2 {
-		errMessage := "invalid ReplicaSet name format: expected format <DEPLOYMENT-NAME>-<RANDOM-STRING>"
-		r.Events.Eventf(application, corev1.EventTypeWarning, ErrorReason, errMessage)
-		return errors.New(errMessage)
-	}
-	var replicaSet appsv1.ReplicaSet
-	if err = r.Get(ctx, types.NamespacedName{Namespace: releaseDeployment.Namespace, Name: replicaSetName}, &replicaSet); err != nil {
-		r.Events.Eventf(application, corev1.EventTypeWarning, ErrorReason, err.Error())
-		return fmt.Errorf("failed to get ReplicaSet %s: %w", replicaSetName, err)
-	}
-	// Unlike the Deployment's Spec.Selector.MatchLabels, ReplicaSet's match labels include pod-template-hash, which
-	// means we can use that to specifically target the pods of the version we want to analyze.
-	matchLabels := replicaSet.Spec.Selector.MatchLabels
-	var requirements []labels.Requirement
-	for key, value := range matchLabels {
-		requirement, err := labels.NewRequirement(key, selection.Equals, []string{value})
-		if err != nil {
-			r.Events.Eventf(application, corev1.EventTypeWarning, ErrorReason, err.Error())
-			return fmt.Errorf("error creating requirement from match label with key %s and value %s: %v", key, value, err)
-		}
-		requirements = append(requirements, *requirement)
-	}
-	podList := corev1.PodList{}
-	if err = r.List(ctx, &podList, &client.ListOptions{Namespace: application.Namespace, LabelSelector: labels.NewSelector().Add(requirements...), Limit: 1}); err != nil {
-		r.Events.Eventf(application, corev1.EventTypeWarning, ErrorReason, err.Error())
-		return err
-	}
-	for _, pod := range podList.Items {
-		log.Info("Analyzing pod", "podName", podList.Items[0].GetName(), "application", application.Name, "namespace", application.Namespace)
-		result := analyzer.Pod(pod)
-		v1.AppAnalysisCondition(application, result)
-		break
-	}
+func (r *ApplicationReconciler) reconcilePodStatus(application *v1.Application, pod *corev1.Pod) error {
+	log.Info("Analyzing latest pod status", "podName", pod.GetName(), "application", application.Name, "namespace", application.Namespace)
+	result := analyzer.Pod(pod)
+	v1.AppPodAnalysisCondition(application, result)
 	return nil
 }
 
@@ -291,6 +249,7 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&v1.Application{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&v2beta1.HelmRelease{}).
+		Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
 
@@ -301,7 +260,7 @@ func (r *ApplicationReconciler) createOrUpdateConfigMap(ctx context.Context, app
 		Name:      application.Name,
 	}, &currentCM)
 
-	if currentCMError == nil && currentCM.ResourceVersion == application.Status.ValuesResourceVersion {
+	if currentCMError == nil && application.Status.ValuesCheckSum != "" && currentCM.Annotations[ValuesChecksumName] != "" && currentCM.Annotations[ValuesChecksumName] == application.Status.ValuesCheckSum {
 		return nil
 	}
 
@@ -317,6 +276,9 @@ func (r *ApplicationReconciler) createOrUpdateConfigMap(ctx context.Context, app
 	if newCM.Labels == nil {
 		newCM.Labels = make(map[string]string)
 	}
+	if newCM.Annotations == nil {
+		newCM.Annotations = make(map[string]string)
+	}
 	newCM.Labels[ManagedBy] = "overwhelm"
 	if err := ctrl.SetControllerReference(application, newCM, r.Scheme); err != nil {
 		return err
@@ -327,7 +289,12 @@ func (r *ApplicationReconciler) createOrUpdateConfigMap(ctx context.Context, app
 		r.Events.Eventf(application, corev1.EventTypeWarning, ErrorReason, err.Error())
 		return err
 	}
-
+	data, err := yaml.Marshal(application.Spec.Data)
+	if err == nil {
+		checksum := fmt.Sprintf("%x", sha1.Sum(data))
+		application.Status.ValuesCheckSum = checksum
+		newCM.Annotations[ValuesChecksumName] = checksum
+	} // need to fix the checksum calculation and check for zero values checksum. Also then need to check pod status
 	if currentCMError != nil {
 		if apierrors.IsNotFound(currentCMError) {
 			if err := r.Create(ctx, newCM); err != nil {
@@ -336,7 +303,6 @@ func (r *ApplicationReconciler) createOrUpdateConfigMap(ctx context.Context, app
 
 				return err
 			}
-			application.Status.ValuesResourceVersion = newCM.ResourceVersion
 			return nil
 		}
 		log.Error(currentCMError, "error retrieving current configmap if exists", "configMap", newCM)
@@ -349,7 +315,6 @@ func (r *ApplicationReconciler) createOrUpdateConfigMap(ctx context.Context, app
 		r.Events.Eventf(application, corev1.EventTypeWarning, ErrorReason, err.Error())
 		return err
 	}
-	application.Status.ValuesResourceVersion = newCM.ResourceVersion
 	return nil
 }
 
@@ -414,6 +379,7 @@ func (r *ApplicationReconciler) createOrUpdateHelmRelease(ctx context.Context, a
 		},
 		Spec: application.Spec.Template.Spec,
 	}
+
 	if err := ctrl.SetControllerReference(application, newHR, r.Scheme); err != nil {
 		return err
 	}
@@ -428,13 +394,13 @@ func (r *ApplicationReconciler) createOrUpdateHelmRelease(ctx context.Context, a
 				r.Events.Eventf(application, corev1.EventTypeWarning, ErrorReason, err.Error())
 				return err
 			}
-			application.Status.HelmReleaseResourceVersion = newHR.ResourceVersion
+			application.Status.HelmReleaseGeneration = newHR.Generation
 			return nil
 		}
 		log.Error(err, "error checking if current HelmRelease exists")
 		return err
 	}
-	if application.Status.HelmReleaseResourceVersion == "" || currentHR.ResourceVersion != application.Status.HelmReleaseResourceVersion {
+	if currentHR.Generation != application.Status.HelmReleaseGeneration {
 		newHR.ResourceVersion = currentHR.ResourceVersion
 
 		if err := r.Update(ctx, newHR); err != nil {
@@ -442,7 +408,36 @@ func (r *ApplicationReconciler) createOrUpdateHelmRelease(ctx context.Context, a
 			r.Events.Eventf(application, corev1.EventTypeWarning, ErrorReason, err.Error())
 			return err
 		}
-		application.Status.HelmReleaseResourceVersion = newHR.ResourceVersion
+		application.Status.HelmReleaseGeneration = newHR.Generation
 	}
 	return nil
+}
+
+func (r *ApplicationReconciler) getApplicationFromPod(req ctrl.Request, pod *corev1.Pod, application *v1.Application) error {
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: req.Namespace, Name: req.Name}, pod); err != nil {
+		return err
+	}
+	if len(pod.GetOwnerReferences()) < 1 {
+		err := errors.New("no ownerReference for Pod")
+		return err
+	}
+	replicaSetReference := pod.GetOwnerReferences()[0]
+	if replicaSetReference.Kind != "ReplicaSet" {
+		err := errors.New("pod owner reference is not a replicaset")
+		return err
+	}
+	replicaSet := &appsv1.ReplicaSet{}
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: req.Namespace, Name: pod.OwnerReferences[0].Name}, replicaSet); err != nil {
+		return err
+	}
+	deployment := &appsv1.Deployment{}
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: req.Namespace, Name: replicaSet.OwnerReferences[0].Name}, deployment); err != nil {
+		return err
+	}
+	if deployment.Labels[LabelHelmReleaseName] == "" {
+		err := errors.New("deployment does not have the helm release labels")
+		return err
+	}
+
+	return r.Get(context.Background(), client.ObjectKey{Namespace: req.Namespace, Name: deployment.Labels[LabelHelmReleaseName]}, application)
 }

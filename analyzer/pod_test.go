@@ -207,7 +207,7 @@ func TestPod(t *testing.T) {
 	// Run the tests
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
-			got := Pod(scenario.pod)
+			got := Pod(&scenario.pod)
 			if got.ResourceName != scenario.want.ResourceName {
 				t.Errorf("expected result with ResourceName=%v, got ResourceName=%v", scenario.want.ResourceName, got.ResourceName)
 			}
