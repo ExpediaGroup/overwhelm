@@ -15,6 +15,7 @@
 // Package v1alpha1 contains API Schema definitions for the core v1alpha1 API group
 //+kubebuilder:object:generate=true
 //+groupName=core.expediagroup.com
+//+versionName:=v1alpha2
 package v1alpha1
 
 import (
