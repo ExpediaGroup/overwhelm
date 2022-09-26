@@ -7,7 +7,7 @@ spec:
   interval: 5m0s
   url: https://stefanprodan.github.io/podinfo
 ---
-apiVersion: core.expediagroup.com/v1alpha1
+apiVersion: core.expediagroup.com/v1alpha2
 kind: Application
 metadata:
   name: podinfo

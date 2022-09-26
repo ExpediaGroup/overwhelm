@@ -147,6 +147,7 @@ helmManifests: manifests kustomize kubernetes-split-yaml ## Create Helm Template
 	$(KUSTOMIZE) build config/helm-manifest >> charts/tmp.yaml
 	go run scripts/helm-charts/update.go
 	$(KUBERNETES_SPLIT_YAML) --outdir charts/overwhelm/templates charts/tmp.yaml
+	mv charts/overwhelm/templates/*-crd.yaml charts/overwhelm/crds
 	rm charts/tmp.yaml
 
 .PHONY: helmInstall

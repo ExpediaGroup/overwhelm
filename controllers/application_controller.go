@@ -44,7 +44,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	v1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
+	v1 "github.com/ExpediaGroup/overwhelm/api/v1alpha2"
 )
 
 // ApplicationReconciler reconciles an Application object
