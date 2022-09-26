@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha2"
+	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -71,7 +71,7 @@ var _ = BeforeSuite(func() {
 
 	err = v2beta1.AddToScheme(k8sManager.GetScheme())
 	Expect(err).NotTo(HaveOccurred())
-	err = corev1alpha1.AddToScheme(k8sManager.GetScheme())
+	err = v1alpha2.AddToScheme(k8sManager.GetScheme())
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
