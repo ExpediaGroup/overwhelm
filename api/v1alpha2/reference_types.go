@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package v1alpha2
 
 // SourceReference is the reference of the source where the chart is available.
 // For e.g., the HelmRepository resource specifying where the helm chart is located

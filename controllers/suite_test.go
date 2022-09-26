@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
+	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha2"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

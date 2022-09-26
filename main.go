@@ -18,7 +18,7 @@ import (
 	"os"
 	"time"
 
-	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha1"
+	corev1alpha1 "github.com/ExpediaGroup/overwhelm/api/v1alpha2"
 	"github.com/ExpediaGroup/overwhelm/controllers"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
 	"k8s.io/apimachinery/pkg/runtime"

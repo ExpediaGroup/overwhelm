@@ -16,7 +16,7 @@
 //+kubebuilder:object:generate=true
 //+groupName=core.expediagroup.com
 //+versionName:=v1alpha2
-package v1alpha1
+package v1alpha2
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -25,7 +25,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "core.expediagroup.com", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: "core.expediagroup.com", Version: "v1alpha2"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
