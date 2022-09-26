@@ -1,6 +1,6 @@
 # This is a sample of the Application Resource that, when deployed in a cluster, triggers the
 # overwhelm operator to perform its reconciliation logic
-apiVersion: core.expediagroup.com/v1alpha1
+apiVersion: core.expediagroup.com/v1alpha2
 kind: Application
 metadata:
   name: application-sample
