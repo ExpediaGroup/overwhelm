@@ -152,7 +152,7 @@ helmManifests: manifests kustomize kubernetes-split-yaml ## Create Helm Template
 
 .PHONY: helmInstall
 helmInstall:
-	helm upgrade -i overwhelm ./charts/overwhelm
+	helm upgrade -i overwhelm -n overwhelm-system ./charts/overwhelm
 
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.

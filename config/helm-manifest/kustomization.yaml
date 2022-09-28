@@ -10,8 +10,8 @@ patchesStrategicMerge:
         name: overwhelm-system
       $patch: delete
 
-patchesJson6902: # We use Json6902 patches for inline replacement patches which are not possible with Strategic Merge patches
-  - target:
+patchesJson6902:
+  - target: # We use Json6902 patches for inline replacement patches  which are not possible with Strategic Merge patches
       group: apps
       version: v1
       kind: Deployment
@@ -20,3 +20,10 @@ patchesJson6902: # We use Json6902 patches for inline replacement patches which 
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value: <GOTEMPLATE> toYaml .Values.deployment.resources  | indent 10 </GOTEMPLATE>
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: applications.core.expediagroup.com
+    path: application_crd_older_version_patch.yaml
+

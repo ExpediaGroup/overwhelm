@@ -16,6 +16,13 @@ spec:
     singular: application
   scope: Namespaced
   versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Application is the Schema for the applications API
+        type: object
+    served: false
+    storage: false
   - additionalPrinterColumns:
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
@@ -48,7 +55,7 @@ spec:
                 description: Data to be consolidated for the Helm Chart's values.yaml file
                 type: object
               preRenderer:
-                description: PreRenderer holds custom templating delimiters and a flag to By default standard delimiters \{\{ and }} will be used to render values within. If specified then the custom delimiters will be used.
+                description: PreRenderer holds custom templating delimiters and a flag. By default, standard delimiters \{\{ and }} will be used to render values within. If specified then the custom delimiters will be used.
                 properties:
                   closeDelimiter:
                     description: Custom non white-spaced and non alpha-numeric close delimiter used for go templating action to pre-render. For e.g., %>. Default is  }}
@@ -56,7 +63,7 @@ spec:
                     minLength: 2
                     type: string
                   enableHelmTemplating:
-                    description: Enable to allow Helm Templating to interpolate values within the default delimiters \{\{ }}. Defaults to false allowing the pre-renderer to do interpolation within the default delimiters. If both helm templating and pre-rendering are desired, then enable EnableHelmTemplating and specify custom delimiters as LeftDelimiter and RightDelimiter
+                    description: Enable to allow Helm Templating to interpolate values within the delimiters \{\{ }}. Defaults to false allowing the pre-renderer to do interpolation within the default delimiters. If both helm templating and pre-rendering are desired, then enable EnableHelmTemplating and specify custom delimiters as LeftDelimiter and RightDelimiter
                     type: boolean
                   openDelimiter:
                     description: Custom non white-spaced and non alpha-numeric open delimiter used for go templating action to pre-render. For e.g., <%. Default is \{\{
@@ -590,7 +597,7 @@ spec:
                 format: int64
                 type: integer
               helmReleaseGeneration:
-                description: HelmReleaseGeneration is the helm release generation
+                description: HelmReleaseGeneration is the helm release generation number
                 format: int64
                 type: integer
               observedGeneration:
@@ -598,7 +605,7 @@ spec:
                 format: int64
                 type: integer
               valuesCheckSum:
-                description: ValuesCheckSum is the checksum of the values for helm
+                description: ValuesCheckSum is the checksum of the values file associated with the helm chart
                 type: string
             type: object
         type: object

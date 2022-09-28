@@ -14,8 +14,6 @@
 
 package v1alpha2
 
-// SourceReference is the reference of the source where the chart is available.
-// For e.g., the HelmRepository resource specifying where the helm chart is located
 
 type PreRenderer struct {
 	// Custom non white-spaced and non alpha-numeric open delimiter used for go templating action to pre-render. For e.g., <%. Default is {{
@@ -30,7 +28,7 @@ type PreRenderer struct {
 	// +optional
 	RightDelimiter string `json:"closeDelimiter,omitempty"`
 
-	// Enable to allow Helm Templating to interpolate values within the default delimiters {{ }}.
+	// Enable to allow Helm Templating to interpolate values within the delimiters {{ }}.
 	// Defaults to false allowing the pre-renderer to do interpolation within the default delimiters. If both helm templating
 	// and pre-rendering are desired, then enable EnableHelmTemplating and specify custom delimiters as LeftDelimiter and RightDelimiter
 	// +optional

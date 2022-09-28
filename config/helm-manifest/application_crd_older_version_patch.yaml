@@ -1,0 +1,11 @@
+# add older versions here if there is a version upgrade of the application CRD
+- op: add
+  path: /spec/versions/0
+  value:
+    name: v1alpha1
+    served: false
+    storage: false
+    schema:
+      openAPIV3Schema:
+        description: Application is the Schema for the applications API
+        type: object

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package v1alpha2contains API Schema definitions for the core v1alpha2 API group
+// Package v1alpha2 contains API Schema definitions for the core v1alpha2 API group
 //+kubebuilder:object:generate=true
 //+groupName=core.expediagroup.com
 //+versionName:=v1alpha2
