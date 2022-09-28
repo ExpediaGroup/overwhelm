@@ -55,7 +55,7 @@ spec:
                 type: object
               preRenderer:
                 description: PreRenderer holds custom templating delimiters and a
-                  flag to By default standard delimiters {{ and }} will be used to
+                  flag. By default, standard delimiters {{ and }} will be used to
                   render values within. If specified then the custom delimiters will
                   be used.
                 properties:
@@ -68,8 +68,8 @@ spec:
                     type: string
                   enableHelmTemplating:
                     description: Enable to allow Helm Templating to interpolate values
-                      within the default delimiters {{ }}. Defaults to false allowing
-                      the pre-renderer to do interpolation within the default delimiters.
+                      within the delimiters {{ }}. Defaults to false allowing the
+                      pre-renderer to do interpolation within the default delimiters.
                       If both helm templating and pre-rendering are desired, then
                       enable EnableHelmTemplating and specify custom delimiters as
                       LeftDelimiter and RightDelimiter
@@ -883,6 +883,7 @@ spec:
                 type: integer
               helmReleaseGeneration:
                 description: HelmReleaseGeneration is the helm release generation
+                  number
                 format: int64
                 type: integer
               observedGeneration:
@@ -890,7 +891,8 @@ spec:
                 format: int64
                 type: integer
               valuesCheckSum:
-                description: ValuesCheckSum is the checksum of the values for helm
+                description: ValuesCheckSum is the checksum of the values file associated
+                  with the helm chart
                 type: string
             type: object
         type: object

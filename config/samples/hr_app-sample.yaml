@@ -4,7 +4,7 @@ metadata:
   name: application-sample
   namespace: app-namespace
   ownerReferences:
-    - apiVersion: core.expediagroup.com/v1alpha2
+    - apiVersion: core.expediagroup.com/v1alpha1
       blockOwnerDeletion: true
       controller: true
       kind: Application

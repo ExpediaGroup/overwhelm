@@ -51,8 +51,8 @@ type ApplicationSpec struct {
 	// +optional
 	Data map[string]string `json:"data,omitempty"`
 
-	// PreRenderer holds custom templating delimiters and a flag to
-	// By default standard delimiters {{ and }} will be used to render values within. If specified then the custom delimiters will be used.
+	// PreRenderer holds custom templating delimiters and a flag.
+	// By default, standard delimiters {{ and }} will be used to render values within. If specified then the custom delimiters will be used.
 	// +optional
 	PreRenderer PreRenderer `json:"preRenderer,omitempty"`
 
@@ -74,11 +74,11 @@ type ApplicationStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// HelmReleaseGeneration is the helm release generation
+	// HelmReleaseGeneration is the helm release generation number
 	// +optional
 	HelmReleaseGeneration int64 `json:"helmReleaseGeneration,omitempty"`
 
-	// ValuesCheckSum is the checksum of the values for helm
+	// ValuesCheckSum is the checksum of the values file associated with the helm chart
 	// +optional
 	ValuesCheckSum string `json:"valuesCheckSum,omitempty"`
 
