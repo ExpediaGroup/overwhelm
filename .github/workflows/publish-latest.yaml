@@ -5,6 +5,15 @@ on:
     branches: [master]
     types: [completed]
 jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tag Repo
+        uses: richardsimko/update-tag@v1
+        with:
+          tag_name: v0.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   publish-latest:
     name: publish-latest
     runs-on: ubuntu-latest
