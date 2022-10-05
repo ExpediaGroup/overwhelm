@@ -4,6 +4,8 @@ on:
     workflows: ["test"]
     branches: [master]
     types: [completed]
+env:
+  VERSION: v0.0.2
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -11,7 +13,7 @@ jobs:
       - name: Tag Repo
         uses: richardsimko/update-tag@v1
         with:
-          tag_name: v0.0.2
+          tag_name: $VERSION
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   publish-latest:
@@ -35,4 +37,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/expediagroup/overwhelm:latest
+          tags: ghcr.io/expediagroup/overwhelm:latest,ghcr.io/expediagroup/overwhelm:$VERSION
