@@ -224,7 +224,6 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 }
 
 func (r *ApplicationReconciler) reconcilePodStatus(application *v1.Application, pod *corev1.Pod) error {
-	log.Info("Analyzing latest pod status", "podName", pod.GetName(), "application", application.Name, "namespace", application.Namespace)
 	result := analyzer.Pod(pod)
 	v1.AppPodAnalysisCondition(application, result)
 	return nil
@@ -294,7 +293,7 @@ func (r *ApplicationReconciler) createOrUpdateConfigMap(ctx context.Context, app
 		checksum := fmt.Sprintf("%x", sha1.Sum(data))
 		application.Status.ValuesCheckSum = checksum
 		newCM.Annotations[ValuesChecksumName] = checksum
-	} // need to fix the checksum calculation and check for zero values checksum. Also then need to check pod status
+	}
 	if currentCMError != nil {
 		if apierrors.IsNotFound(currentCMError) {
 			if err := r.Create(ctx, newCM); err != nil {
