@@ -76,8 +76,8 @@ var log logr.Logger
 //+kubebuilder:rbac:groups=helm.toolkit.fluxcd.io,resources=helmreleases/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;watch
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get
-//+kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
+//+kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
