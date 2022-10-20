@@ -1,5 +1,6 @@
 # overwhelm
 ![test](https://github.com/ExpediaGroup/overwhelm/workflows/test/badge.svg?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ExpediaGroup/overwhelm)](https://goreportcard.com/report/github.com/ExpediaGroup/overwhelm)
 
 Overwhelm is an operator that facilitates application deployment on Kubernetes.
 
