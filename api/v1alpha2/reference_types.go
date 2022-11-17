@@ -14,7 +14,6 @@
 
 package v1alpha2
 
-
 type PreRenderer struct {
 	// Custom non white-spaced and non alpha-numeric open delimiter used for go templating action to pre-render. For e.g., <%. Default is {{
 	// +kubebuilder:validation:MinLength=2

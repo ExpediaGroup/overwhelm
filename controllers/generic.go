@@ -23,16 +23,25 @@ func LoadPreRenderData() {
 	defer close(stop)
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(cm interface{}) {
-			preRenderData[cm.(*v1.ConfigMap).Labels[ReferenceLabel]] = cm.(*v1.ConfigMap).Data
+			addToPrerenderData(cm.(*v1.ConfigMap))
 		},
 		UpdateFunc: func(oldCM interface{}, cm interface{}) {
-			preRenderData[cm.(*v1.ConfigMap).Labels[ReferenceLabel]] = cm.(*v1.ConfigMap).Data
+			addToPrerenderData(cm.(*v1.ConfigMap))
 		},
 		DeleteFunc: func(cm interface{}) {
 			delete(preRenderData, cm.(*v1.ConfigMap).Labels[ReferenceLabel])
 		},
 	})
 	informer.Run(stop)
+}
+
+func addToPrerenderData(cm *v1.ConfigMap) {
+	for k, v := range cm.Data {
+		if preRenderData[cm.Labels[ReferenceLabel]] == nil {
+			preRenderData[cm.Labels[ReferenceLabel]] = make(map[string]string)
+		}
+		preRenderData[cm.Labels[ReferenceLabel]][k] = v
+	}
 }
 
 func GetPreRenderData() map[string]map[string]string {

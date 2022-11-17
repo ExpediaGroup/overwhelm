@@ -41,13 +41,13 @@ func analyzeContainers(containerStatuses []v1.ContainerStatus, result *Result) {
 	for _, container := range containerStatuses {
 		if !container.Ready {
 			result.Healthy = false
-		}
-		if container.State.Waiting != nil {
-			result.Errors = append(result.Errors, formatContainerError(container.Name, "waiting", container.State.Waiting.Reason, container.State.Waiting.Message, 0, container.Ready))
-		} else if container.State.Terminated != nil && container.State.Terminated.Reason != "Completed" {
-			result.Errors = append(result.Errors, formatContainerError(container.Name, "terminated", container.State.Terminated.Reason, container.State.Terminated.Message, container.State.Terminated.ExitCode, container.Ready))
-		} else if container.State.Running != nil && !container.Ready {
-			result.Errors = append(result.Errors, formatContainerError(container.Name, "running", "", "", 0, container.Ready))
+			if container.State.Waiting != nil {
+				result.Errors = append(result.Errors, formatContainerError(container.Name, "waiting", container.State.Waiting.Reason, container.State.Waiting.Message, 0, container.Ready))
+			} else if container.State.Terminated != nil && container.State.Terminated.Reason != "Completed" {
+				result.Errors = append(result.Errors, formatContainerError(container.Name, "terminated", container.State.Terminated.Reason, container.State.Terminated.Message, container.State.Terminated.ExitCode, container.Ready))
+			} else if container.State.Running != nil && !container.Ready {
+				result.Errors = append(result.Errors, formatContainerError(container.Name, "running", "", "", 0, container.Ready))
+			}
 		}
 	}
 }
@@ -59,20 +59,19 @@ func formatContainerError(containerName, state, reason, message string, exitCode
 	}
 	if !ready {
 		sb.WriteString(" is not ready and")
-	} else {
-		sb.WriteString(" is ready and")
-	}
-	if len(state) > 0 {
-		sb.WriteString(fmt.Sprintf(" is in a %s state", state))
-	}
-	if len(reason) > 0 {
-		sb.WriteString(fmt.Sprintf(" due to reason '%s'", reason))
-	}
-	if len(message) > 0 {
-		sb.WriteString(fmt.Sprintf(" with message '%s'", message))
-	}
-	if exitCode > 0 {
-		sb.WriteString(fmt.Sprintf(" (exit code %d)", exitCode))
+		if len(state) > 0 {
+			sb.WriteString(fmt.Sprintf(" is in a %s state", state))
+		}
+		if len(reason) > 0 {
+			sb.WriteString(fmt.Sprintf(" due to reason '%s'", reason))
+		}
+		if len(message) > 0 {
+			sb.WriteString(fmt.Sprintf(" with message '%s'", message))
+		}
+		if exitCode > 0 {
+			sb.WriteString(fmt.Sprintf(" (exit code %d)", exitCode))
+		}
 	}
 	return strings.TrimSpace(sb.String())
+
 }
