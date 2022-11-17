@@ -123,7 +123,6 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if err = r.getApplicationFromPod(req, pod, application); err != nil {
 			return ctrl.Result{}, nil
 		}
-		//log.Info("Pod Values", "pod", req.Name)
 		helmReadyStatus, _ := r.reconcileHelmReleaseStatus(ctx, application)
 		if helmReadyStatus && r.reconcilePodStatus(ctx, application, pod) {
 			if patchErr := r.patchStatus(ctx, application); patchErr != nil {
