@@ -100,6 +100,7 @@ spec:
                                 type: string
                               interval:
                                 description: Interval at which to check the v1beta2.Source for updates. Defaults to 'HelmReleaseSpec.Interval'.
+                                pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                                 type: string
                               reconcileStrategy:
                                 default: ChartVersion
@@ -142,6 +143,27 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              verify:
+                                description: Verify contains the secret name containing the trusted public keys used to verify the signature and specifies which provider to use to check whether OCI image is authentic. This field is only supported for OCI sources. Chart dependencies, which are not bundled in the umbrella chart artifact, are not verified.
+                                properties:
+                                  provider:
+                                    default: cosign
+                                    description: Provider specifies the technology used to sign the OCI Helm chart.
+                                    enum:
+                                    - cosign
+                                    type: string
+                                  secretRef:
+                                    description: SecretRef specifies the Kubernetes Secret containing the trusted public keys.
+                                    properties:
+                                      name:
+                                        description: Name of the referent.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                required:
+                                - provider
+                                type: object
                               version:
                                 default: '*'
                                 description: Version semver expression, ignored for charts from v1beta2.GitRepository and v1beta2.Bucket sources. Defaults to latest when omitted.
@@ -214,10 +236,12 @@ spec:
                             type: boolean
                           timeout:
                             description: Timeout is the time to wait for any individual Kubernetes operation (like Jobs for hooks) during the performance of a Helm install action. Defaults to 'HelmReleaseSpec.Timeout'.
+                            pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                             type: string
                         type: object
                       interval:
                         description: Interval at which to reconcile the Helm release.
+                        pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                         type: string
                       kubeConfig:
                         description: KubeConfig for reconciling the HelmRelease on a remote cluster. When used in combination with HelmReleaseSpec.ServiceAccountName, forces the controller to act on behalf of that Service Account at the target cluster. If the --default-service-account flag is set, its value will be used as a controller level fallback for when HelmReleaseSpec.ServiceAccountName is empty.
@@ -402,6 +426,7 @@ spec:
                             type: boolean
                           timeout:
                             description: Timeout is the time to wait for any individual Kubernetes operation (like Jobs for hooks) during the performance of a Helm rollback action. Defaults to 'HelmReleaseSpec.Timeout'.
+                            pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                             type: string
                         type: object
                       serviceAccountName:
@@ -431,10 +456,12 @@ spec:
                             type: boolean
                           timeout:
                             description: Timeout is the time to wait for any individual Kubernetes operation during the performance of a Helm test action. Defaults to 'HelmReleaseSpec.Timeout'.
+                            pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                             type: string
                         type: object
                       timeout:
                         description: Timeout is the time to wait for any individual Kubernetes operation (like Jobs for hooks) during the performance of a Helm action. Defaults to '5m0s'.
+                        pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m))+$
                         type: string
                       uninstall:
                         description: Uninstall holds the configuration for Helm uninstall actions for this HelmRelease.
@@ -450,6 +477,7 @@ spec:
                             type: boolean
                           timeout:
                             description: Timeout is the time to wait for any individual Kubernetes operation (like Jobs for hooks) during the performance of a Helm uninstall action. Defaults to 'HelmReleaseSpec.Timeout'.
+                            pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                             type: string
                         type: object
                       upgrade:
@@ -504,6 +532,7 @@ spec:
                             type: object
                           timeout:
                             description: Timeout is the time to wait for any individual Kubernetes operation (like Jobs for hooks) during the performance of a Helm upgrade action. Defaults to 'HelmReleaseSpec.Timeout'.
+                            pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                             type: string
                         type: object
                       values:
@@ -530,9 +559,13 @@ spec:
                               type: boolean
                             targetPath:
                               description: TargetPath is the YAML dot notation path the value should be merged at. When set, the ValuesKey is expected to be a single flat value. Defaults to 'None', which results in the values getting merged at the root.
+                              maxLength: 250
+                              pattern: ^([a-zA-Z0-9_\-.\\\/]|\[[0-9]{1,5}\])+$
                               type: string
                             valuesKey:
-                              description: ValuesKey is the data key where the values.yaml or a specific value can be found at. Defaults to 'values.yaml'.
+                              description: ValuesKey is the data key where the values.yaml or a specific value can be found at. Defaults to 'values.yaml'. When set, must be a valid Data Key, consisting of alphanumeric characters, '-', '_' or '.'.
+                              maxLength: 253
+                              pattern: ^[\-._a-zA-Z0-9]+$
                               type: string
                           required:
                           - kind
@@ -551,7 +584,7 @@ spec:
               conditions:
                 description: Conditions holds the conditions for the Application.
                 items:
-                  description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
                   properties:
                     lastTransitionTime:
                       description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.

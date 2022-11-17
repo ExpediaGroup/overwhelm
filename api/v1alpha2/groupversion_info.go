@@ -13,9 +13,9 @@
 // limitations under the License.
 
 // Package v1alpha2 contains API Schema definitions for the core v1alpha2 API group
-//+kubebuilder:object:generate=true
-//+groupName=core.expediagroup.com
-//+versionName:=v1alpha2
+// +kubebuilder:object:generate=true
+// +groupName=core.expediagroup.com
+// +versionName:=v1alpha2
 package v1alpha2
 
 import (

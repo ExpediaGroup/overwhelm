@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
@@ -491,26 +490,3 @@ var _ = Describe("Application controller", func() {
 		})
 	})
 })
-
-func Test_extractReplicaSetNameFromDeployment(t *testing.T) {
-	tests := []struct {
-		deployment *appsv1.Deployment
-		want       string
-	}{
-		{
-			deployment: &appsv1.Deployment{
-				Status: appsv1.DeploymentStatus{
-					Conditions: []appsv1.DeploymentCondition{{Type: appsv1.DeploymentProgressing, Message: `ReplicaSet "podname-55f99cdb4b" is progressing.`}},
-				},
-			},
-			want: "podname-55f99cdb4b",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.want, func(t *testing.T) {
-			if got := extractReplicaSetNameFromDeployment(tt.deployment); got != tt.want {
-				t.Errorf("extractReplicaSetNameFromDeployment() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}

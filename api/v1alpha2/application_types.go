@@ -16,6 +16,7 @@ package v1alpha2
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ExpediaGroup/overwhelm/analyzer"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
@@ -24,8 +25,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+const PodReady = "PodReady"
+const ContainersNotReady = "ContainersNotReady"
+const PodInitializing = "PodInitializing"
 
 type Metadata struct {
 	Labels      map[string]string `json:"labels,omitempty"`
@@ -139,18 +143,20 @@ func AppErrorStatus(application *Application, error string) {
 	apimeta.SetStatusCondition(&application.Status.Conditions, condition)
 }
 
-func AppPodAnalysisCondition(application *Application, result analyzer.Result) {
+func AppPodAnalysisCondition(application *Application, result analyzer.Result) bool {
+	appPodReadyCondition := apimeta.FindStatusCondition(application.Status.Conditions, PodReady)
 	condition := metav1.Condition{
-		Type:   "PodReady", // Could be meta.ReadyCondition, but it would clash with the HR
-		Reason: "ContainersReady",
+		Type: PodReady, // Could be meta.ReadyCondition, but it would clash with the HR
 	}
-	if result.Healthy {
-		condition.Status = metav1.ConditionTrue
-		condition.Message = "At least one new pod has progressed successfully"
-	} else {
-		condition.Reason = "ContainersNotReady"
-		condition.Status = metav1.ConditionFalse
+	if !result.Healthy {
+
 		condition.Message = fmt.Sprintf("%s %s is unhealthy: %v", result.ResourceType, result.ResourceName, result.Errors)
+		if appPodReadyCondition == nil || strings.Contains(appPodReadyCondition.Message, PodInitializing) || !strings.Contains(condition.Message, PodInitializing) {
+			condition.Reason = ContainersNotReady
+			condition.Status = metav1.ConditionFalse
+			apimeta.SetStatusCondition(&application.Status.Conditions, condition)
+			return true
+		}
 	}
-	apimeta.SetStatusCondition(&application.Status.Conditions, condition)
+	return false
 }
