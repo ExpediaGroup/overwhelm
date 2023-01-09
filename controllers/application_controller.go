@@ -20,13 +20,14 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"github.com/fluxcd/pkg/apis/meta"
-	"gopkg.in/yaml.v3"
 	"regexp"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"text/template"
 	"time"
+
+	"github.com/fluxcd/pkg/apis/meta"
+	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/ExpediaGroup/overwhelm/analyzer"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
@@ -396,7 +397,7 @@ func (r *ApplicationReconciler) renderValues(application *v1.Application) error 
 		if err != nil {
 			return err
 		}
-		if err = tmpl.Execute(buf, GetPreRenderData()); err != nil {
+		if err = tmpl.Execute(buf, GetPreRenderData(application.GetLabels())); err != nil {
 			return err
 		}
 		values[key] = buf.String()

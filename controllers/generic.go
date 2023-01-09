@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"strings"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
@@ -10,6 +12,8 @@ import (
 )
 
 var preRenderData = make(map[string]map[string]string)
+
+const expediaType = "k8s.expediagroup.com"
 
 const ReferenceLabel = "overwhelm.expediagroup.com/render-values-source"
 
@@ -44,6 +48,12 @@ func addToPrerenderData(cm *v1.ConfigMap) {
 	}
 }
 
-func GetPreRenderData() map[string]map[string]string {
+func GetPreRenderData(appLabels map[string]string) map[string]map[string]string {
+	for label, labelValue := range appLabels {
+		if strings.HasPrefix(label, expediaType) {
+			trimmedLabel := strings.Trim(strings.TrimPrefix(label, expediaType), "/")
+			preRenderData["application"][trimmedLabel] = labelValue
+		}
+	}
 	return preRenderData
 }
