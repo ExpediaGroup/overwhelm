@@ -50,14 +50,16 @@ func addToPrerenderData(cm *v1.ConfigMap) {
 }
 
 func GetPreRenderData(appLabels map[string]string) map[string]map[string]string {
-	for label, labelValue := range appLabels {
-		if strings.HasPrefix(label, expediaType) {
-			//Initialise the map, even if there is a single label matching criteria
-			if preRenderData[ApplicationKey] == nil {
-				preRenderData[ApplicationKey] = make(map[string]string)
+	if appLabels != nil {
+		for label, labelValue := range appLabels {
+			if strings.HasPrefix(label, expediaType) {
+				//Initialise the map, even if there is a single label matching criteria
+				if preRenderData[ApplicationKey] == nil {
+					preRenderData[ApplicationKey] = make(map[string]string)
+				}
+				trimmedLabel := strings.Trim(strings.TrimPrefix(label, expediaType), "/")
+				preRenderData[ApplicationKey][trimmedLabel] = labelValue
 			}
-			trimmedLabel := strings.Trim(strings.TrimPrefix(label, expediaType), "/")
-			preRenderData[ApplicationKey][trimmedLabel] = labelValue
 		}
 	}
 	return preRenderData
