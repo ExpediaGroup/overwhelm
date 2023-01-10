@@ -16,6 +16,7 @@ var preRenderData = make(map[string]map[string]string)
 const expediaType = "k8s.expediagroup.com"
 
 const ReferenceLabel = "overwhelm.expediagroup.com/render-values-source"
+const ApplicationKey = "application"
 
 func LoadPreRenderData() {
 	labelOptions := informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
@@ -51,8 +52,12 @@ func addToPrerenderData(cm *v1.ConfigMap) {
 func GetPreRenderData(appLabels map[string]string) map[string]map[string]string {
 	for label, labelValue := range appLabels {
 		if strings.HasPrefix(label, expediaType) {
+			//Initialise the map, even if there is a single label matching criteria
+			if preRenderData[ApplicationKey] == nil {
+				preRenderData[ApplicationKey] = make(map[string]string)
+			}
 			trimmedLabel := strings.Trim(strings.TrimPrefix(label, expediaType), "/")
-			preRenderData["application"][trimmedLabel] = labelValue
+			preRenderData[ApplicationKey][trimmedLabel] = labelValue
 		}
 	}
 	return preRenderData
