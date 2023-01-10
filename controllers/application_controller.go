@@ -20,13 +20,14 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"github.com/fluxcd/pkg/apis/meta"
-	"gopkg.in/yaml.v3"
 	"regexp"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"text/template"
 	"time"
+
+	"github.com/fluxcd/pkg/apis/meta"
+	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/ExpediaGroup/overwhelm/analyzer"
 	"github.com/fluxcd/helm-controller/api/v2beta1"
@@ -97,7 +98,7 @@ var log logr.Logger
 //+kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch
-//+kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch
+//+kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;update;create
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -396,7 +397,7 @@ func (r *ApplicationReconciler) renderValues(application *v1.Application) error 
 		if err != nil {
 			return err
 		}
-		if err = tmpl.Execute(buf, GetPreRenderData()); err != nil {
+		if err = tmpl.Execute(buf, GetPreRenderData(application.GetLabels())); err != nil {
 			return err
 		}
 		values[key] = buf.String()
