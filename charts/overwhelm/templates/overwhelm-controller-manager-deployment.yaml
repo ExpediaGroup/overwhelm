@@ -17,6 +17,10 @@ spec:
       labels: 
 {{ toYaml .Values.deployment.labels  | indent 8 }}
     spec:
+      {{- if .Values.deployment.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.deployment.image.pullSecret }}
+      {{- end }}
       containers:
       - args:
         - --health-probe-bind-address=:8081
@@ -62,9 +66,5 @@ spec:
             memory: 64Mi
       securityContext:
         runAsNonRoot: true
-      {{- if .Values.deployment.image.pullSecret }}
-      imagePullSecrets:
-        - name: {{ .Values.deployment.image.pullSecret }}
-      {{- end }}
       serviceAccountName: overwhelm-controller-manager
       terminationGracePeriodSeconds: 10

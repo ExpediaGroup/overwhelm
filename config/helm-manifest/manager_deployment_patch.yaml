@@ -1,19 +1,18 @@
-# Use <GOTEMPLATE></GOTEMPLATE> tags for Go template delimiters to be inserted by the script/helm-charts/update.go script
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: overwhelm-controller-manager
   namespace: overwhelm-system
 spec:
-  replicas: <GOTEMPLATE> .Values.deployment.replicas </GOTEMPLATE>
+  replicas: "{{ .Values.deployment.replicas }}"
   template:
     metadata:
       $patch: replace
-      annotations: <GOTEMPLATE> toYaml .Values.deployment.annotations  | indent 8 </GOTEMPLATE>
-      labels: <GOTEMPLATE> toYaml .Values.deployment.labels  | indent 8 </GOTEMPLATE>
+      annotations: "{{ toYaml .Values.deployment.annotations  | indent 8 }}"
+      labels: "{{ toYaml .Values.deployment.labels  | indent 8 }}"
     spec:
       containers:
       - name: manager
-        image: <GOTEMPLATE> .Values.deployment.image.manager.repository </GOTEMPLATE>:<GOTEMPLATE> .Values.deployment.image.manager.tag </GOTEMPLATE>
+        image: "{{ .Values.deployment.image.manager.repository }}:{{ .Values.deployment.image.manager.tag }}"
       - name: kube-rbac-proxy
-        image: <GOTEMPLATE> .Values.deployment.image.kubeRbacProxy.repository </GOTEMPLATE>:<GOTEMPLATE> .Values.deployment.image.kubeRbacProxy.tag </GOTEMPLATE>
+        image: "{{ .Values.deployment.image.kubeRbacProxy.repository }}:{{ .Values.deployment.image.kubeRbacProxy.tag }}"
