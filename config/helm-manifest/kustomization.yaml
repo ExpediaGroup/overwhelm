@@ -29,9 +29,11 @@ patchesJson6902:
       - op: replace
         path: /spec/template/spec/
         value: |
-          {{- if .Values.deployment.image.pullSecret }}
+          {{- if .Values.global.imagePullSecrets }}
           imagePullSecrets:
-            - name: {{ .Values.deployment.image.pullSecret }}
+          {{- range .Values.global.imagePullSecrets }}
+            - name: {{ . }}
+          {{- end }}
           {{- end }}
   - target:
       group: apiextensions.k8s.io

@@ -17,9 +17,11 @@ spec:
       labels: 
 {{ toYaml .Values.deployment.labels  | indent 8 }}
     spec:
-      {{- if .Values.deployment.image.pullSecret }}
+      {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
-        - name: {{ .Values.deployment.image.pullSecret }}
+      {{- range .Values.global.imagePullSecrets }}
+        - name: {{ . }}
+      {{- end }}
       {{- end }}
       containers:
       - args:

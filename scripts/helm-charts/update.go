@@ -17,10 +17,11 @@ func main() {
 	data := string(d)
 	//if condition string patch. The kustomize created a sub element to spec element since we cant add this block to the spec key directly. This bit
 	//will remove the sub element and indent this block back to the spec element
-	ifString := regexp.MustCompile("{{- if(.|\n)+end }}").FindString(data)
+
+	ifString := regexp.MustCompile("{{- if(.|\n)+{{- end }}").FindString(data)
 	ifIndentPatch := regexp.MustCompile("\n\\s\\s").ReplaceAllString(ifString, "\n")
 	data = regexp.MustCompile("\"\": \\|-\\s+").ReplaceAllString(data, "")
-	data = regexp.MustCompile("{{- if(.|\n)+end }}").ReplaceAllString(data, ifIndentPatch)
+	data = regexp.MustCompile("{{- if(.|\n)+({{- end }})").ReplaceAllString(data, ifIndentPatch)
 
 	data = strings.ReplaceAll(data, "'{{", "{{")
 	data = strings.ReplaceAll(data, "}}'", "}}")
