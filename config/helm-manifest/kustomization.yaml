@@ -29,7 +29,7 @@ patchesJson6902:
       - op: replace
         path: /spec/template/spec/
         value: |
-          {{- if .Values.global.imagePullSecrets }}
+          {{- if and .Values.global .Values.global.imagePullSecrets }}
           imagePullSecrets:
           {{- range .Values.global.imagePullSecrets }}
             - name: {{ . }}
