@@ -61,9 +61,9 @@ spec:
                 type: object
               preRenderer:
                 description: PreRenderer holds custom templating delimiters and a
-                  flag. By default, standard delimiters {{ and }} will be used to
-                  render values within. If specified then the custom delimiters will
-                  be used.
+                  flag. By default, standard delimiters "{{" and "}}" will be used
+                  to render values within. If specified then the custom delimiters
+                  will be used.
                 properties:
                   closeDelimiter:
                     description: Custom non white-spaced and non alpha-numeric close
@@ -83,7 +83,8 @@ spec:
                   openDelimiter:
                     description: Custom non white-spaced and non alpha-numeric open
                       delimiter used for go templating action to pre-render. For e.g.,
-                      <%. Default is {{ maxLength: 2
+                      <%. Default is "{{"
+                    maxLength: 2
                     minLength: 2
                     type: string
                 type: object

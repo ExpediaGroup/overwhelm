@@ -56,7 +56,7 @@ type ApplicationSpec struct {
 	Data map[string]string `json:"data,omitempty"`
 
 	// PreRenderer holds custom templating delimiters and a flag.
-	// By default, standard delimiters {{ and }} will be used to render values within. If specified then the custom delimiters will be used.
+	// By default, standard delimiters "{{" and "}}" will be used to render values within. If specified then the custom delimiters will be used.
 	// +optional
 	PreRenderer PreRenderer `json:"preRenderer,omitempty"`
 
