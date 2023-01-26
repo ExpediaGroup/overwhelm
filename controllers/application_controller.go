@@ -183,7 +183,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					return ctrl.Result{}, err
 				} else {
 					//HelmRelease is not found, which means it got deleted when finalized by helm-controller.
-					log.Info(fmt.Sprintf("Removing finalizer for Application: %s", application.Name))
+					log.Info(fmt.Sprintf("Removing finalizer for Application: %s as HelmRelease is not found", application.Name))
 					patch := client.MergeFrom(application.DeepCopy())
 					controllerutil.RemoveFinalizer(application, FinalizerName)
 					if err = r.Patch(ctx, application, patch); err != nil {

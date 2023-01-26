@@ -5,7 +5,7 @@ on:
     branches: [master]
     types: [completed]
 env:
-  VERSION: v0.0.4
+  VERSION: v0.0.5
 jobs:
   deploy:
     runs-on: ubuntu-latest
