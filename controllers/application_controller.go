@@ -187,6 +187,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					patch := client.MergeFrom(application.DeepCopy())
 					controllerutil.RemoveFinalizer(application, FinalizerName)
 					if err = r.Patch(ctx, application, patch); err != nil {
+						err = fmt.Errorf("failed to patch while removing Finalizer for '%s': %w", req.Name, err)
 						return ctrl.Result{}, err
 					}
 					log.Info(fmt.Sprintf("Removed finalizer for Application: %s", application.Name))
