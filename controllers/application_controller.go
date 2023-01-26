@@ -197,7 +197,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					err = fmt.Errorf("failed to delete HelmRelease '%s': %w", req.Name, err)
 					return ctrl.Result{}, err
 				}
-				log.Info(fmt.Sprintf("HelmRelease: %s issued a delete, will wait for it to get deleted.", helmRelease.Name))
+				log.Info(fmt.Sprintf("Issued a delete for HelmRelease: %s, will wait for it to get deleted.", helmRelease.Name))
 			}
 		}
 	}
