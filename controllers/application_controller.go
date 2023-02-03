@@ -124,14 +124,14 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if err = r.getApplicationFromPod(req, pod, application); err != nil {
 			return ctrl.Result{}, nil
 		}
-		if r.reconcilePodStatus(ctx, application, pod) {
-			helmReadyStatusNotReconciled, _ := r.reconcileHelmReleaseStatus(ctx, application)
-			if helmReadyStatusNotReconciled {
-				if patchErr := r.patchStatus(ctx, application); patchErr != nil {
-					log.Error(patchErr, "Error updating application status")
-					return ctrl.Result{}, patchErr
-				}
+
+		helmReadyStatusNotReconciled, _ := r.reconcileHelmReleaseStatus(ctx, application)
+		if helmReadyStatusNotReconciled && r.reconcilePodStatus(ctx, application, pod) {
+			if patchErr := r.patchStatus(ctx, application); patchErr != nil {
+				log.Error(patchErr, "Error updating application status")
+				return ctrl.Result{}, patchErr
 			}
+
 		}
 
 		return ctrl.Result{}, nil
@@ -248,6 +248,7 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 		apimeta.SetStatusCondition(&application.Status.Conditions, condition)
 		if condition.Type == meta.ReadyCondition && condition.Reason == v2beta1.ReconciliationSucceededReason {
 			apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
+			return false, nil
 		}
 	}
 	return true, nil
