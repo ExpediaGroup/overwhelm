@@ -125,12 +125,14 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, nil
 		}
 		helmReadyStatus, _ := r.reconcileHelmReleaseStatus(ctx, application)
-		if helmReadyStatus && r.reconcilePodStatus(ctx, application, pod) {
+		if r.reconcilePodStatus(ctx, application, pod) && helmReadyStatus {
 			if patchErr := r.patchStatus(ctx, application); patchErr != nil {
 				log.Error(patchErr, "Error updating application status")
 				return ctrl.Result{}, patchErr
 			}
+
 		}
+
 		return ctrl.Result{}, nil
 	}
 	if application.ObjectMeta.DeletionTimestamp.IsZero() {
