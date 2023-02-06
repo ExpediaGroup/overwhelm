@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"text/template"
 	"time"
 
@@ -42,7 +43,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -124,13 +124,16 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if err = r.getApplicationFromPod(req, pod, application); err != nil {
 			return ctrl.Result{}, nil
 		}
-		helmReadyStatus, _ := r.reconcileHelmReleaseStatus(ctx, application)
-		if helmReadyStatus && r.reconcilePodStatus(ctx, application, pod) {
+
+		helmReadyStatusNotReconciled, _ := r.reconcileHelmReleaseStatus(ctx, application)
+		if helmReadyStatusNotReconciled && r.reconcilePodStatus(ctx, application, pod) {
 			if patchErr := r.patchStatus(ctx, application); patchErr != nil {
 				log.Error(patchErr, "Error updating application status")
 				return ctrl.Result{}, patchErr
 			}
+
 		}
+
 		return ctrl.Result{}, nil
 	}
 	if application.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -245,6 +248,7 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 		apimeta.SetStatusCondition(&application.Status.Conditions, condition)
 		if condition.Type == meta.ReadyCondition && condition.Reason == v2beta1.ReconciliationSucceededReason {
 			apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
+			return false, nil
 		}
 	}
 	return true, nil
