@@ -244,14 +244,15 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 		apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
 		return false, nil
 	}
+	helmReadyStatusNotReconciled := true
 	for _, condition := range hr.GetConditions() {
 		apimeta.SetStatusCondition(&application.Status.Conditions, condition)
 		if condition.Type == meta.ReadyCondition && condition.Reason == v2beta1.ReconciliationSucceededReason {
 			apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
-			return false, nil
+			helmReadyStatusNotReconciled = false
 		}
 	}
-	return true, nil
+	return helmReadyStatusNotReconciled, nil
 }
 
 func (r *ApplicationReconciler) reconcilePodStatus(ctx context.Context, application *v1.Application, pod *corev1.Pod) bool {
