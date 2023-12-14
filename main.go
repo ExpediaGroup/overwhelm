@@ -79,7 +79,7 @@ func main() {
 	}
 	setupLog.Info("Loading cluster data")
 
-	go controllers.LoadPreRenderData()
+	go controllers.LoadClusterData()
 
 	if err = (&controllers.ApplicationReconciler{
 		Client:          mgr.GetClient(),

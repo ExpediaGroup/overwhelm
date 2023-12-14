@@ -155,13 +155,13 @@ var pod = &v1.Pod{
 }
 
 func LoadTestPrerenderData() {
-	preRenderData["cluster"] = map[string]string{
+	clusterData["cluster"] = map[string]string{
 		"cluster": "some-cluster",
 		"region":  "us-west-2",
 		"account": "1234",
 		"segment": "some-segment",
 	}
-	preRenderData["egdata"] = map[string]string{
+	clusterData["egdata"] = map[string]string{
 		"environment": "test",
 	}
 }

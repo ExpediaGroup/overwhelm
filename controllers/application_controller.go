@@ -402,13 +402,15 @@ func (r *ApplicationReconciler) renderValues(application *v1.Application) error 
 			}
 		}
 	}
+	preRenderData := GetPreRenderData(application.GetLabels())
+
 	for key, value := range values {
 		buf := new(bytes.Buffer)
 		tmpl, err := template.New("properties").Option("missingkey=error").Delims(leftDelimiter, rightDelimiter).Parse(value)
 		if err != nil {
 			return err
 		}
-		if err = tmpl.Execute(buf, GetPreRenderData(application.GetLabels())); err != nil {
+		if err = tmpl.Execute(buf, preRenderData); err != nil {
 			return err
 		}
 		values[key] = buf.String()
