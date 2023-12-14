@@ -1,24 +1,22 @@
 package controllers
 
 import (
-	"strings"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"strings"
 )
 
-var preRenderData = make(map[string]map[string]string)
-
-const expediaType = "k8s.expediagroup.com"
+var clusterData = make(map[string]map[string]string)
 
 const ReferenceLabel = "overwhelm.expediagroup.com/render-values-source"
 const ApplicationKey = "application"
+const ExpediaType = "k8s.expediagroup.com"
 
-func LoadPreRenderData() {
+func LoadClusterData() {
 	labelOptions := informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
 		opts.LabelSelector = ReferenceLabel
 	})
@@ -28,35 +26,39 @@ func LoadPreRenderData() {
 	defer close(stop)
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(cm interface{}) {
-			addToPrerenderData(cm.(*v1.ConfigMap))
+			AddToClusterData(cm.(*v1.ConfigMap))
 		},
 		UpdateFunc: func(oldCM interface{}, cm interface{}) {
-			addToPrerenderData(cm.(*v1.ConfigMap))
+			AddToClusterData(cm.(*v1.ConfigMap))
 		},
 		DeleteFunc: func(cm interface{}) {
-			delete(preRenderData, cm.(*v1.ConfigMap).Labels[ReferenceLabel])
+			delete(clusterData, cm.(*v1.ConfigMap).Labels[ReferenceLabel])
 		},
 	})
 	informer.Run(stop)
 }
 
-func addToPrerenderData(cm *v1.ConfigMap) {
+func AddToClusterData(cm *v1.ConfigMap) {
 	for k, v := range cm.Data {
-		if preRenderData[cm.Labels[ReferenceLabel]] == nil {
-			preRenderData[cm.Labels[ReferenceLabel]] = make(map[string]string)
+		if clusterData[cm.Labels[ReferenceLabel]] == nil {
+			clusterData[cm.Labels[ReferenceLabel]] = make(map[string]string)
 		}
-		preRenderData[cm.Labels[ReferenceLabel]][k] = v
+		clusterData[cm.Labels[ReferenceLabel]][k] = v
 	}
 }
 
-func GetPreRenderData(appLabels map[string]string) map[string]map[string]string {
-	for label, labelValue := range appLabels {
-		if strings.HasPrefix(label, expediaType) {
+func GetPreRenderData(labels map[string]string) map[string]map[string]string {
+	preRenderData := make(map[string]map[string]string)
+	for key, value := range clusterData {
+		preRenderData[key] = value
+	}
+	for label, labelValue := range labels {
+		if strings.HasPrefix(label, ExpediaType) {
 			//Initialise the map, even if there is a single label matching criteria
 			if preRenderData[ApplicationKey] == nil {
 				preRenderData[ApplicationKey] = make(map[string]string)
 			}
-			trimmedLabel := strings.Trim(strings.TrimPrefix(label, expediaType), "/")
+			trimmedLabel := strings.Trim(strings.TrimPrefix(label, ExpediaType), "/")
 			preRenderData[ApplicationKey][trimmedLabel] = labelValue
 		}
 	}
