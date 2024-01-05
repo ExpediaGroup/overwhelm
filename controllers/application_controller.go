@@ -406,7 +406,7 @@ func (r *ApplicationReconciler) renderValues(application *v1.Application) error 
 
 	for key, value := range values {
 		buf := new(bytes.Buffer)
-		tmpl, err := template.New("properties").Option("missingkey=error").Delims(leftDelimiter, rightDelimiter).Parse(value)
+		tmpl, err := template.New("properties").Option("missingkey=zero").Delims(leftDelimiter, rightDelimiter).Parse(value)
 		if err != nil {
 			return err
 		}
