@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
+	"github.com/ExpediaGroup/overwhelm/api/v1beta1"
 	"github.com/ExpediaGroup/overwhelm/controllers"
 	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,6 +45,7 @@ func init() {
 
 	utilruntime.Must(v2beta2.AddToScheme(scheme))
 	utilruntime.Must(v1alpha2.AddToScheme(scheme))
+	utilruntime.Must(v1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
