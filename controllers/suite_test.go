@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
+	"github.com/ExpediaGroup/overwhelm/api/v1beta1"
 	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"k8s.io/client-go/kubernetes/scheme"
 	"path/filepath"
@@ -67,6 +68,8 @@ var _ = BeforeSuite(func() {
 	err = v2beta2.AddToScheme(k8sManager.GetScheme())
 	Expect(err).NotTo(HaveOccurred())
 	err = v1alpha2.AddToScheme(k8sManager.GetScheme())
+	Expect(err).NotTo(HaveOccurred())
+	err = v1beta1.AddToScheme(k8sManager.GetScheme())
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme

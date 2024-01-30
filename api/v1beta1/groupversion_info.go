@@ -15,7 +15,7 @@
 // Package v1alpha2 contains API Schema definitions for the core v1alpha2 API group
 // +kubebuilder:object:generate=true
 // +groupName=core.expediagroup.com
-// +versionName:=v1alpha2
+// +versionName:=v1beta1
 package v1beta1
 
 import (
@@ -25,7 +25,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "core.expediagroup.com", Version: "v1alpha2"}
+	GroupVersion = schema.GroupVersion{Group: "core.expediagroup.com", Version: "v1beta1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
