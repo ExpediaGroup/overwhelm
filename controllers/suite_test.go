@@ -16,7 +16,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
 	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -74,8 +73,7 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: k8sManager.GetScheme()})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
-	sch := k8sManager.GetScheme()
-	fmt.Println(sch.Name())
+	
 	err = (&ApplicationReconciler{
 		Client:          k8sManager.GetClient(),
 		Scheme:          k8sManager.GetScheme(),
