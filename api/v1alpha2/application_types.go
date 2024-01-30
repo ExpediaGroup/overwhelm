@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/ExpediaGroup/overwhelm/analyzer"
-	"github.com/fluxcd/helm-controller/api/v2beta1"
+	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"github.com/fluxcd/pkg/apis/meta"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +43,7 @@ type ReleaseTemplate struct {
 
 	// Spec to be applied to the Helm Release resource created by the Application Controller
 	// +required
-	Spec v2beta1.HelmReleaseSpec `json:"spec,omitempty"`
+	Spec v2beta2.HelmReleaseSpec `json:"spec,omitempty"`
 }
 
 // ApplicationSpec defines the desired state of Application
