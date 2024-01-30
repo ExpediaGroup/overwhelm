@@ -15,14 +15,13 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"go.uber.org/zap/zapcore"
 	"os"
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
 	"github.com/ExpediaGroup/overwhelm/controllers"
+	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -79,8 +78,6 @@ func main() {
 		os.Exit(1)
 	}
 	setupLog.Info("Loading cluster data")
-	confg := ctrl.GetConfigOrDie()
-	fmt.Println(confg.ServerName)
 	go controllers.LoadClusterData()
 
 	if err = (&controllers.ApplicationReconciler{
