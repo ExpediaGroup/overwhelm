@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ExpediaGroup/overwhelm/api/v1beta1"
 	"time"
 
-	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
 	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"github.com/fluxcd/pkg/apis/meta"
 	. "github.com/onsi/ginkgo"
@@ -20,9 +20,9 @@ import (
 
 var ctx context.Context
 
-var application = &v1alpha2.Application{
+var application = &v1beta1.Application{
 	TypeMeta: metav1.TypeMeta{
-		APIVersion: "core.expediagroup.com/v1alpha2",
+		APIVersion: "core.expediagroup.com/v1beta1",
 		Kind:       "Application",
 	},
 	ObjectMeta: metav1.ObjectMeta{
@@ -31,9 +31,9 @@ var application = &v1alpha2.Application{
 			"test-my-label": "ok",
 		},
 	},
-	Spec: v1alpha2.ApplicationSpec{
-		Template: v1alpha2.ReleaseTemplate{
-			Metadata: v1alpha2.Metadata{
+	Spec: v1beta1.ApplicationSpec{
+		Template: v1beta1.ReleaseTemplate{
+			Metadata: v1beta1.Metadata{
 				Labels: map[string]string{"test-temp-label": "ok"},
 			},
 			Spec: v2beta2.HelmReleaseSpec{
@@ -251,9 +251,9 @@ var _ = Describe("Application controller", func() {
 				}}
 				hr.SetConditions(conditions)
 				Expect(k8sClient.Status().Update(ctx, hr)).Should(BeNil())
-				app := &v1alpha2.Application{}
+				app := &v1beta1.Application{}
 				Eventually(
-					func(ctx context.Context, key client.ObjectKey, app *v1alpha2.Application) func() error {
+					func(ctx context.Context, key client.ObjectKey, app *v1beta1.Application) func() error {
 						return func() error {
 							if err := k8sClient.Get(ctx, key, app); err != nil {
 								return err
@@ -289,9 +289,9 @@ var _ = Describe("Application controller", func() {
 				}}
 				hr.SetConditions(conditions)
 				Expect(k8sClient.Status().Update(ctx, hr)).Should(BeNil())
-				app := &v1alpha2.Application{}
+				app := &v1beta1.Application{}
 				Eventually(
-					func(ctx context.Context, app *v1alpha2.Application) func() error {
+					func(ctx context.Context, app *v1beta1.Application) func() error {
 						return func() error {
 							if err := k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, app); err != nil {
 								return err
@@ -374,7 +374,7 @@ var _ = Describe("Application controller", func() {
 						}
 					}(ctx, p), 5*time.Second, 300*time.Millisecond).Should(BeNil())
 				Eventually(
-					func(ctx context.Context, app *v1alpha2.Application) func() error {
+					func(ctx context.Context, app *v1beta1.Application) func() error {
 						return func() error {
 							if err := k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, app); err != nil {
 								return err
@@ -394,7 +394,7 @@ var _ = Describe("Application controller", func() {
 			By("Creating a new ConfigMap and rendering it with custom delimiter", func() {
 				b := application.DeepCopy()
 				b.Name = "b-app"
-				b.Spec.PreRenderer = v1alpha2.PreRenderer{
+				b.Spec.PreRenderer = v1beta1.PreRenderer{
 					LeftDelimiter:        "<%",
 					RightDelimiter:       "%>",
 					EnableHelmTemplating: true,
@@ -421,7 +421,7 @@ var _ = Describe("Application controller", func() {
 				a := application.DeepCopy()
 				a.Name = "a-app"
 				key := client.ObjectKey{Name: a.Name, Namespace: a.Namespace}
-				currentApp := &v1alpha2.Application{}
+				currentApp := &v1beta1.Application{}
 				Expect(k8sClient.Get(ctx, key, currentApp)).Should(BeNil())
 				a.ResourceVersion = currentApp.ResourceVersion
 				a.Spec.Template.Spec.Interval = metav1.Duration{Duration: time.Millisecond * 500}
@@ -477,7 +477,7 @@ var _ = Describe("Application controller", func() {
 		By("having missing custom rendering keys in values", func() {
 			d := application.DeepCopy()
 			d.Name = "d-app"
-			d.Spec.PreRenderer = v1alpha2.PreRenderer{
+			d.Spec.PreRenderer = v1beta1.PreRenderer{
 				LeftDelimiter:        "<%",
 				RightDelimiter:       "%>",
 				EnableHelmTemplating: true,

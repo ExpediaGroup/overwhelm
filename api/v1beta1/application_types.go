@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha2
+package v1beta1
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/ExpediaGroup/overwhelm/analyzer"
-	"github.com/fluxcd/helm-controller/api/v2beta1"
+	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"github.com/fluxcd/pkg/apis/meta"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +43,7 @@ type ReleaseTemplate struct {
 
 	// Spec to be applied to the Helm Release resource created by the Application Controller
 	// +required
-	Spec v2beta1.HelmReleaseSpec `json:"spec,omitempty"`
+	Spec v2beta2.HelmReleaseSpec `json:"spec,omitempty"`
 }
 
 // ApplicationSpec defines the desired state of Application
@@ -100,6 +100,7 @@ type ApplicationStatus struct {
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description=""
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message",description=""
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description=""
+//+kubebuilder:storageversion
 
 // Application is the Schema for the applications API
 type Application struct {
