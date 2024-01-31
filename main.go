@@ -20,8 +20,9 @@ import (
 	"time"
 
 	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
+	"github.com/ExpediaGroup/overwhelm/api/v1beta1"
 	"github.com/ExpediaGroup/overwhelm/controllers"
-	"github.com/fluxcd/helm-controller/api/v2beta1"
+	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -30,6 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -41,8 +43,9 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(v2beta1.AddToScheme(scheme))
+	utilruntime.Must(v2beta2.AddToScheme(scheme))
 	utilruntime.Must(v1alpha2.AddToScheme(scheme))
+	utilruntime.Must(v1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -67,18 +70,16 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "e04e01ad.expediagroup.com",
+		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 	setupLog.Info("Loading cluster data")
-
 	go controllers.LoadClusterData()
 
 	if err = (&controllers.ApplicationReconciler{

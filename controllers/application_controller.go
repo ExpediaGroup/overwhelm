@@ -28,10 +28,11 @@ import (
 	"github.com/fluxcd/pkg/apis/meta"
 	"gopkg.in/yaml.v3"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/ExpediaGroup/overwhelm/analyzer"
-	"github.com/fluxcd/helm-controller/api/v2beta1"
+	"github.com/fluxcd/helm-controller/api/v2beta2"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,11 +44,9 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	v1 "github.com/ExpediaGroup/overwhelm/api/v1alpha2"
+	v1 "github.com/ExpediaGroup/overwhelm/api/v1beta1"
 )
 
 // ApplicationReconciler reconciles an Application object
@@ -179,7 +178,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	} else {
 		if controllerutil.ContainsFinalizer(application, FinalizerName) {
-			helmRelease := &v2beta1.HelmRelease{}
+			helmRelease := &v2beta2.HelmRelease{}
 			if err = r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: req.Name}, helmRelease); err != nil {
 				if !apierrors.IsNotFound(err) {
 					err = fmt.Errorf("failed to get HelmRelease '%s': %w", req.Name, err)
@@ -217,7 +216,7 @@ func (r *ApplicationReconciler) patchStatus(ctx context.Context, application *v1
 }
 
 func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, application *v1.Application) (bool, error) {
-	hr := v2beta1.HelmRelease{}
+	hr := v2beta2.HelmRelease{}
 	err := r.Get(ctx, types.NamespacedName{
 		Namespace: application.Namespace,
 		Name:      application.Name,
@@ -239,7 +238,17 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 		return false, err
 	}
 	application.Status.Failures = 0
-	if hr.Status.ObservedGeneration != hr.Generation {
+	/*
+		The following changed with helmRelease.v2beta2 where now LastAttemptedGeneration is updated in case of errors and observedGeneration is not,
+		which caused Overwhelm controller to be stuck below in case the HR goes into error state.
+	*/
+	var latestHRGeneration int64
+	if hr.Status.ObservedGeneration > hr.Status.LastAttemptedGeneration {
+		latestHRGeneration = hr.Status.ObservedGeneration
+	} else {
+		latestHRGeneration = hr.Status.LastAttemptedGeneration
+	}
+	if latestHRGeneration != hr.Generation {
 		v1.AppErrorStatus(application, "updated Helm Release status not available")
 		apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
 		return false, nil
@@ -247,7 +256,7 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 	helmReadyStatusNotReconciled := true
 	for _, condition := range hr.GetConditions() {
 		apimeta.SetStatusCondition(&application.Status.Conditions, condition)
-		if condition.Type == meta.ReadyCondition && condition.Reason == v2beta1.ReconciliationSucceededReason {
+		if condition.Type == meta.ReadyCondition && condition.Reason == v2beta2.ReconciliationSucceededReason {
 			apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
 			helmReadyStatusNotReconciled = false
 		}
@@ -306,9 +315,8 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 		}).
 		Owns(&corev1.ConfigMap{}).
-		Owns(&v2beta1.HelmRelease{}).
-		Watches(&source.Kind{Type: &corev1.Pod{}},
-			&handler.EnqueueRequestForObject{}).
+		Owns(&v2beta2.HelmRelease{}).
+		Watches(&corev1.Pod{}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
 
@@ -434,7 +442,7 @@ func (r *ApplicationReconciler) CreateOrUpdateResources(ctx context.Context, app
 }
 
 func (r *ApplicationReconciler) createOrUpdateHelmRelease(ctx context.Context, application *v1.Application) (bool, error) {
-	newHR := &v2beta1.HelmRelease{
+	newHR := &v2beta2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        application.Name,
 			Namespace:   application.Namespace,
@@ -447,7 +455,7 @@ func (r *ApplicationReconciler) createOrUpdateHelmRelease(ctx context.Context, a
 	if err := ctrl.SetControllerReference(application, newHR, r.Scheme); err != nil {
 		return false, err
 	}
-	currentHR := &v2beta1.HelmRelease{}
+	currentHR := &v2beta2.HelmRelease{}
 	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: application.Namespace,
 		Name:      application.Name,

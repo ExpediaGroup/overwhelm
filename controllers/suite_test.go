@@ -16,19 +16,19 @@ package controllers
 
 import (
 	"context"
+	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
+	"github.com/ExpediaGroup/overwhelm/api/v1beta1"
+	"github.com/fluxcd/helm-controller/api/v2beta2"
+	"k8s.io/client-go/kubernetes/scheme"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/ExpediaGroup/overwhelm/api/v1alpha2"
-	"github.com/fluxcd/helm-controller/api/v2beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	//+kubebuilder:scaffold:imports
@@ -43,10 +43,7 @@ var cancel context.CancelFunc
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Controller Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -61,7 +58,6 @@ var _ = BeforeSuite(func() {
 	}
 
 	cfg, err := testEnv.Start()
-
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -69,9 +65,11 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = v2beta1.AddToScheme(k8sManager.GetScheme())
+	err = v2beta2.AddToScheme(k8sManager.GetScheme())
 	Expect(err).NotTo(HaveOccurred())
 	err = v1alpha2.AddToScheme(k8sManager.GetScheme())
+	Expect(err).NotTo(HaveOccurred())
+	err = v1beta1.AddToScheme(k8sManager.GetScheme())
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
