@@ -255,8 +255,13 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 	}
 	helmReadyStatusNotReconciled := true
 	for _, condition := range hr.GetConditions() {
-		apimeta.SetStatusCondition(&application.Status.Conditions, condition)
-		if condition.Type == meta.ReadyCondition && condition.Reason == v2beta2.ReconciliationSucceededReason {
+		if condition.Reason == meta.ProgressingReason || condition.Status == metav1.ConditionUnknown {
+			v1.AppInProgressStatus(application)
+			break
+		} else {
+			apimeta.SetStatusCondition(&application.Status.Conditions, condition)
+		}
+		if condition.Type == meta.ReadyCondition && condition.Status == metav1.ConditionTrue {
 			apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
 			helmReadyStatusNotReconciled = false
 		}
