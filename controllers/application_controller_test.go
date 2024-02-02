@@ -277,15 +277,15 @@ var _ = Describe("Application controller", func() {
 							return k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, hr)
 						}
 					}(ctx, hr), 5*time.Second, 300*time.Millisecond).Should(BeNil())
-				hr.Status.ObservedGeneration = 1
-				hr.Generation = hr.Status.ObservedGeneration
+				hr.Status.LastAttemptedGeneration = 1
+				hr.Generation = hr.Status.LastAttemptedGeneration
 				conditions := []metav1.Condition{{
 					Type:               meta.ReadyCondition,
 					Status:             metav1.ConditionStatus(v1.ConditionTrue),
 					ObservedGeneration: 1,
 					LastTransitionTime: metav1.NewTime(time.Now()),
-					Message:            "Helm Release Reconciled",
-					Reason:             meta.SucceededReason,
+					Message:            "Helm Release Reconciliation in Progress",
+					Reason:             meta.ProgressingReason,
 				}}
 				hr.SetConditions(conditions)
 				Expect(k8sClient.Status().Update(ctx, hr)).Should(BeNil())
