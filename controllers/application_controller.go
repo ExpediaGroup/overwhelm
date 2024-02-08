@@ -248,23 +248,25 @@ func (r *ApplicationReconciler) reconcileHelmReleaseStatus(ctx context.Context, 
 	} else {
 		latestHRGeneration = hr.Status.LastAttemptedGeneration
 	}
-	if latestHRGeneration != hr.Generation {
-		v1.AppErrorStatus(application, "updated Helm Release status not available")
-		apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
-		return false, nil
-	}
 	helmReadyStatusNotReconciled := true
 	for _, condition := range hr.GetConditions() {
-		if condition.Reason == meta.ProgressingReason || condition.Status == metav1.ConditionUnknown {
-			v1.AppInProgressStatus(application)
-			break
-		} else {
-			apimeta.SetStatusCondition(&application.Status.Conditions, condition)
+		if condition.ObservedGeneration == hr.Generation {
+			latestHRGeneration = hr.Generation
+			if condition.Type == meta.ReconcilingCondition {
+				continue
+			} else {
+				apimeta.SetStatusCondition(&application.Status.Conditions, condition)
+			}
+			if condition.Type == meta.ReadyCondition && condition.Status == metav1.ConditionTrue {
+				apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
+				helmReadyStatusNotReconciled = false
+			}
 		}
-		if condition.Type == meta.ReadyCondition && condition.Status == metav1.ConditionTrue {
-			apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
-			helmReadyStatusNotReconciled = false
-		}
+	}
+	if latestHRGeneration != hr.Generation {
+		v1.AppUnknownStatus(application, "Updated Helm Release status not yet available")
+		apimeta.RemoveStatusCondition(&application.Status.Conditions, v1.PodReady)
+		return false, nil
 	}
 	return helmReadyStatusNotReconciled, nil
 }

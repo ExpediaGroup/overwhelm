@@ -281,7 +281,7 @@ var _ = Describe("Application controller", func() {
 				hr.Generation = hr.Status.LastAttemptedGeneration
 				conditions := []metav1.Condition{{
 					Type:               meta.ReadyCondition,
-					Status:             metav1.ConditionStatus(v1.ConditionTrue),
+					Status:             metav1.ConditionStatus(v1.ConditionUnknown),
 					ObservedGeneration: 1,
 					LastTransitionTime: metav1.NewTime(time.Now()),
 					Message:            "Helm Release Reconciliation in Progress",
@@ -379,8 +379,8 @@ var _ = Describe("Application controller", func() {
 							if err := k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, app); err != nil {
 								return err
 							}
-							fmt.Println(app.Status.Conditions)
 							if len(app.Status.Conditions) != 2 {
+								fmt.Println(app.Status.Conditions[0].Message)
 								return errors.New("waiting for Analysis condition")
 							}
 							if app.Status.Conditions[1].Message != `Pod appname-55f99cdb4b-eeeeeeee is unhealthy: [container 'application' is not ready and is in a waiting state due to reason 'ImagePullBackOff' with message 'Back-off pulling image "secret/secret:secret"']` {
