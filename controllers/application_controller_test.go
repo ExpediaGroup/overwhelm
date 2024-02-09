@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/ExpediaGroup/overwhelm/api/v1beta1"
 	"time"
 
@@ -380,7 +379,6 @@ var _ = Describe("Application controller", func() {
 								return err
 							}
 							if len(app.Status.Conditions) != 2 {
-								fmt.Println(app.Status.Conditions[0].Message)
 								return errors.New("waiting for Analysis condition")
 							}
 							if app.Status.Conditions[1].Message != `Pod appname-55f99cdb4b-eeeeeeee is unhealthy: [container 'application' is not ready and is in a waiting state due to reason 'ImagePullBackOff' with message 'Back-off pulling image "secret/secret:secret"']` {
