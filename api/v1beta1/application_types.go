@@ -134,6 +134,17 @@ func AppInProgressStatus(application *Application) {
 	apimeta.SetStatusCondition(&application.Status.Conditions, condition)
 }
 
+func AppUnknownStatus(application *Application, message string) {
+	application.Status.Conditions = []metav1.Condition{}
+	condition := metav1.Condition{
+		Type:    meta.ReadyCondition,
+		Status:  metav1.ConditionUnknown,
+		Reason:  meta.ProgressingReason,
+		Message: message,
+	}
+	apimeta.SetStatusCondition(&application.Status.Conditions, condition)
+}
+
 func AppErrorStatus(application *Application, error string) {
 	condition := metav1.Condition{
 		Type:    meta.ReadyCondition,

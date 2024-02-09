@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/ExpediaGroup/overwhelm/api/v1beta1"
 	"time"
 
@@ -281,7 +280,7 @@ var _ = Describe("Application controller", func() {
 				hr.Generation = hr.Status.LastAttemptedGeneration
 				conditions := []metav1.Condition{{
 					Type:               meta.ReadyCondition,
-					Status:             metav1.ConditionStatus(v1.ConditionTrue),
+					Status:             metav1.ConditionStatus(v1.ConditionUnknown),
 					ObservedGeneration: 1,
 					LastTransitionTime: metav1.NewTime(time.Now()),
 					Message:            "Helm Release Reconciliation in Progress",
@@ -379,7 +378,6 @@ var _ = Describe("Application controller", func() {
 							if err := k8sClient.Get(ctx, client.ObjectKey{Name: a.Name, Namespace: a.Namespace}, app); err != nil {
 								return err
 							}
-							fmt.Println(app.Status.Conditions)
 							if len(app.Status.Conditions) != 2 {
 								return errors.New("waiting for Analysis condition")
 							}
