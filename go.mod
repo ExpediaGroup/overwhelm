@@ -1,6 +1,6 @@
 module github.com/ExpediaGroup/overwhelm
 
-go 1.20
+go 1.24
 
 require (
 	github.com/fluxcd/helm-controller/api v0.37.2
