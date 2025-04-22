@@ -173,7 +173,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		// At this point the Helm Release can be reconciled
 		_, err = r.reconcileHelmReleaseStatus(ctx, application)
 		if patchErr := r.patchStatus(ctx, application); patchErr != nil {
-			log.Error(patchErr, "Error updating application status")
+			log.Error(patchErr, "Error updating Application Status")
 			return ctrl.Result{}, patchErr
 		}
 	} else {
