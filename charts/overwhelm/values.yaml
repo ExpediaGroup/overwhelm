@@ -17,4 +17,15 @@ deployment:
     requests:
       cpu: 128m
       memory: 64Mi
-
+  affinity: {}
+    # podAntiAffinity:
+    #   preferredDuringSchedulingIgnoredDuringExecution:
+    #     - podAffinityTerm:
+    #         labelSelector:
+    #           matchExpressions:
+    #             - key: control-plane
+    #               operator: In
+    #               values:
+    #                 - controller-manager
+    #         topologyKey: kubernetes.io/hostname
+    #       weight: 100
